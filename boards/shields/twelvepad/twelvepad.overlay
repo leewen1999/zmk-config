@@ -1,0 +1,51 @@
+// twelvepad - 12 test keys + 2 Bluetooth keys, direct GPIO (no matrix, no diodes)
+// Wiring: each switch connects between its GPIO pin and GND.
+// Internal pull-up is used (GPIO_ACTIVE_LOW | GPIO_PULL_UP).
+
+#include <dt-bindings/zmk/matrix_transform.h>
+
+#include "twelvepad-layouts.dtsi"
+
+/ {
+    chosen {
+        zmk,physical-layout = &default_layout;
+    };
+
+    kscan: kscan {
+        compatible = "zmk,kscan-gpio-direct";
+        wakeup-source;
+
+        // Key order = order below (SW1 .. SW12).
+        // Pins 10 and 16 (P0.09 / P0.10) are NFC pins on the nRF52840, so they
+        // are intentionally not used here. Change pins to match your wiring.
+        input-gpios
+            = <&pro_micro  0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW1
+            , <&pro_micro  1 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW2
+            , <&pro_micro  2 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW3
+            , <&pro_micro  3 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW4
+            , <&pro_micro  4 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW5
+            , <&pro_micro  5 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW6
+            , <&pro_micro  6 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW7
+            , <&pro_micro  7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW8
+            , <&pro_micro  8 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW9
+            , <&pro_micro  9 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW10
+            , <&pro_micro 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW11
+            , <&pro_micro 15 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW12
+            , <&pro_micro 18 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW13 (BT_SEL)
+            , <&pro_micro 19 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW14 (BT_CLR)
+            ;
+    };
+
+    default_transform: default_transform {
+        // Direct GPIO is reported as a single row, one column per pin.
+        compatible = "zmk,matrix-transform";
+        columns = <14>;
+        rows = <1>;
+
+        map = <
+            RC(0, 0) RC(0, 1) RC(0, 2)  RC(0, 3)  RC(0, 4)  RC(0, 5)
+            RC(0, 6) RC(0, 7) RC(0, 8)  RC(0, 9)  RC(0, 10) RC(0, 11)
+            RC(0, 12) RC(0, 13)
+        >;
+    };
+};

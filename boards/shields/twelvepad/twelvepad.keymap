@@ -1,0 +1,22 @@
+// twelvepad - 12 test keys + 2 Bluetooth keys (direct GPIO)
+// SW1..SW12 send A..L so every switch/pin can be verified at a glance.
+// SW13 = select Bluetooth profile 0, SW14 = clear the current Bluetooth profile.
+
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/keys.h>
+#include <dt-bindings/zmk/bt.h>
+
+/ {
+    keymap {
+        compatible = "zmk,keymap";
+
+        default_layer {
+            display-name = "Test";
+            bindings = <
+                &kp A  &kp B  &kp C  &kp D  &kp E  &kp F
+                &kp G  &kp H  &kp I  &kp J  &kp K  &kp L
+                &bt BT_SEL 0  &bt BT_CLR
+            >;
+        };
+    };
+};
