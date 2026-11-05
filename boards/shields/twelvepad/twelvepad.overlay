@@ -1,4 +1,4 @@
-// twelvepad - 14 keys, direct GPIO (no matrix, no diodes)
+// twelvepad - 15 keys, direct GPIO (no matrix, no diodes)
 // Wiring: each switch connects between its GPIO pin and GND.
 // Internal pull-up is used (GPIO_ACTIVE_LOW | GPIO_PULL_UP).
 
@@ -33,19 +33,26 @@
             , <&pro_micro 15 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // D15 -> SPACE
             , <&pro_micro 18 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // A0/D18 -> Z
             , <&pro_micro 19 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // A1/D19 -> X
+            , <&pro_micro 20 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // A2/D20 -> SOFT_OFF (hold)
             ;
     };
 
     default_transform: default_transform {
         // Direct GPIO is reported as a single row, one column per pin.
         compatible = "zmk,matrix-transform";
-        columns = <14>;
+        columns = <15>;
         rows = <1>;
 
         map = <
             RC(0, 0) RC(0, 1) RC(0, 2)  RC(0, 3)  RC(0, 4)  RC(0, 5)
             RC(0, 6) RC(0, 7) RC(0, 8)  RC(0, 9)  RC(0, 10) RC(0, 11)
-            RC(0, 12) RC(0, 13)
+            RC(0, 12) RC(0, 13) RC(0, 14)
         >;
+    };
+
+    // Soft off: after &soft_off, any key on the kscan above wakes the keyboard.
+    soft_off_wakers {
+        compatible = "zmk,soft-off-wakeup-sources";
+        wakeup-sources = <&kscan>;
     };
 };

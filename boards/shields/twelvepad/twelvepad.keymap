@@ -1,13 +1,22 @@
-// twelvepad - 14 keys, direct GPIO
+// twelvepad - 15 keys, direct GPIO
 // Key order follows the input-gpios order in twelvepad.overlay:
-//   pro_micro  0  1  2  3  4  5  6   7     8    9    14     15     18  19
-//   key        BT_SEL BT_CLR 1 2 3 4 UP RIGHT DOWN LEFT ENTER SPACE Z   X
+//   pro_micro  0      1      2 3 4 5  6  7     8    9    14     15     18 19 20
+//   key        BT_SEL BT_CLR 1 2 3 4  UP RIGHT DOWN LEFT ENTER SPACE  Z  X  SOFT_OFF
+// SOFT_OFF: hold for 2 seconds to power off; press any key to wake up.
 
 #include <behaviors.dtsi>
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/bt.h>
 
 / {
+    behaviors {
+        soft_off_hold: soft_off_hold {
+            compatible = "zmk,behavior-soft-off";
+            #binding-cells = <0>;
+            hold-time-ms = <2000>;
+        };
+    };
+
     keymap {
         compatible = "zmk,keymap";
 
@@ -16,7 +25,7 @@
             bindings = <
                 &bt BT_SEL 0  &bt BT_CLR  &kp N1  &kp N2  &kp N3     &kp N4
                 &kp UP        &kp RIGHT   &kp DOWN &kp LEFT &kp ENTER &kp SPACE
-                &kp Z         &kp X
+                &kp Z         &kp X       &soft_off_hold
             >;
         };
     };
