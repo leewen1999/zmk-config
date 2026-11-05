@@ -1,0 +1,24 @@
+config BLE_STATUS_LED
+    bool "Blink an LED while the active BLE profile is disconnected"
+    depends on ZMK_BLE
+    default n
+
+if BLE_STATUS_LED
+
+config BLE_STATUS_LED_PIN
+    int "GPIO pin number on port 0 (P0.x)"
+    default 15
+
+config BLE_STATUS_LED_ACTIVE_LOW
+    bool "LED is active low"
+    default n
+
+config BLE_STATUS_LED_BLINK_MS
+    int "Toggle interval while disconnected (ms)"
+    default 500
+
+config BLE_STATUS_LED_CHECK_MS
+    int "Connection polling interval while connected (ms)"
+    default 1000
+
+endif # BLE_STATUS_LED

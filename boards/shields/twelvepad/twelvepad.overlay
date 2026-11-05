@@ -1,4 +1,4 @@
-// twelvepad - 12 test keys + 2 Bluetooth keys, direct GPIO (no matrix, no diodes)
+// twelvepad - 14 keys, direct GPIO (no matrix, no diodes)
 // Wiring: each switch connects between its GPIO pin and GND.
 // Internal pull-up is used (GPIO_ACTIVE_LOW | GPIO_PULL_UP).
 
@@ -15,24 +15,24 @@
         compatible = "zmk,kscan-gpio-direct";
         wakeup-source;
 
-        // Key order = order below (SW1 .. SW12).
+        // Key order = order below (must match twelvepad.keymap).
         // Pins 10 and 16 (P0.09 / P0.10) are NFC pins on the nRF52840, so they
         // are intentionally not used here. Change pins to match your wiring.
         input-gpios
-            = <&pro_micro  0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW1
-            , <&pro_micro  1 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW2
-            , <&pro_micro  2 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW3
-            , <&pro_micro  3 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW4
-            , <&pro_micro  4 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW5
-            , <&pro_micro  5 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW6
-            , <&pro_micro  6 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW7
-            , <&pro_micro  7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW8
-            , <&pro_micro  8 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW9
-            , <&pro_micro  9 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW10
-            , <&pro_micro 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW11
-            , <&pro_micro 15 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW12
-            , <&pro_micro 18 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW13 (BT_SEL)
-            , <&pro_micro 19 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW14 (BT_CLR)
+            = <&pro_micro  0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // D0/RX -> BT_SEL
+            , <&pro_micro  1 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // D1/TX -> BT_CLR
+            , <&pro_micro  2 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // D2 -> 1
+            , <&pro_micro  3 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // D3 -> 2
+            , <&pro_micro  4 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // D4 -> 3
+            , <&pro_micro  5 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // D5 -> 4
+            , <&pro_micro  6 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // D6 -> UP
+            , <&pro_micro  7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // D7 -> RIGHT
+            , <&pro_micro  8 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // D8 -> DOWN
+            , <&pro_micro  9 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // D9 -> LEFT
+            , <&pro_micro 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // D14 -> ENTER
+            , <&pro_micro 15 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // D15 -> SPACE
+            , <&pro_micro 18 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // A0/D18 -> Z
+            , <&pro_micro 19 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // A1/D19 -> X
             ;
     };
 
