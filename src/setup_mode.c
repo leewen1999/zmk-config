@@ -17,6 +17,10 @@
  *   - SM_CANCEL (on release) / SM_EXIT (now): leave setup mode
  *
  * Keymap layers: 0 = default, 1 = setup, 2 = sleep (all keys disabled).
+ *
+ * Power management: when ZMK suspends devices before deep sleep / soft off,
+ * the PM hook below stops the timer and turns all LEDs off (otherwise a lit
+ * LED stays lit during deep sleep).
  */
 
 #define DT_DRV_COMPAT zmk_behavior_setup_mode
@@ -25,6 +29,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/init.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/pm/device.h>
 #include <zephyr/logging/log.h>
 
 #include <drivers/behavior.h>
@@ -360,12 +365,32 @@ static int on_released(struct zmk_behavior_binding *binding,
     return ZMK_BEHAVIOR_OPAQUE;
 }
 
+/* Called by ZMK when it suspends devices (idle deep sleep, soft off). */
+static int __maybe_unused setup_mode_pm_action(const struct device *dev,
+                                               enum pm_device_action action) {
+    switch (action) {
+    case PM_DEVICE_ACTION_SUSPEND:
+        k_work_cancel_delayable(&tick_work);
+        leds_set(0);
+        return 0;
+    case PM_DEVICE_ACTION_RESUME:
+        /* Normally the keyboard reboots on wake; if we resume without a reboot,
+         * start again from a clean default state. */
+        exit_setup();
+        return 0;
+    default:
+        return -ENOTSUP;
+    }
+}
+
+PM_DEVICE_DT_INST_DEFINE(0, setup_mode_pm_action);
+
 static const struct behavior_driver_api setup_mode_driver_api = {
     .binding_pressed = on_pressed,
     .binding_released = on_released,
 };
 
-BEHAVIOR_DT_INST_DEFINE(0, NULL, NULL, NULL, NULL, POST_KERNEL,
+BEHAVIOR_DT_INST_DEFINE(0, NULL, PM_DEVICE_DT_INST_GET(0), NULL, NULL, POST_KERNEL,
                         CONFIG_KERNEL_INIT_PRIORITY_DEFAULT, &setup_mode_driver_api);
 
 static int setup_mode_init(void) {
