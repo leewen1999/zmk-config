@@ -10,7 +10,7 @@
 //   SW5..SW8  click -> BT_CLR for profile 0..3 (selects it, clears it), leave setup mode
 //   SW9       click -> sleep (LED animation, then soft off once no key is held)
 //   SW10      click -> nothing, leave setup mode
-//   SW11      hold  -> battery level on LEDs (0-5 %: LED_0 blinks 250 ms), release = LEDs off + leave setup mode
+//   SW11      hold  -> battery level on LEDs (0-5 %: LED_0 blinks 500 ms), release = LEDs off + leave setup mode
 //   SW12      hold  -> current BT profile on LEDs, release = LEDs off + leave setup mode
 //
 // Sleep layer (2): everything disabled while the sleep animation runs.

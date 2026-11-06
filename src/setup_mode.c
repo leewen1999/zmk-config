@@ -4,6 +4,7 @@
  * Normal state:
  *   - boot / wake: all LEDs on for 500 ms, then off
  *   - BLE not connected: the LED of the active profile blinks (500 ms on / 500 ms off)
+ *   - battery <= 5 %: LED_0 blinks (250 ms on / 250 ms off), checked every tick
  *
  * Setup mode (keymap layer 1, entered by the &sm SM_ENTER hold behavior on release):
  *   - all LEDs flash with a 250 ms timer
@@ -43,6 +44,11 @@ extern int zmk_pm_soft_off(void) __attribute__((weak));
 #define LED_ALL ((1U << LED_COUNT) - 1U)
 #define TICK_MS 250
 #define SETUP_TICK_MS 250
+
+/* Low battery warning (default layer): LED_0 blinks at 250 ms when soc <= this. */
+#define LOW_BATT_PERCENT 5
+/* Ignore the battery value right after boot (it may not have been sampled yet). */
+#define LOW_BATT_GRACE_MS 5000
 
 #define LAYER_DEFAULT 0
 #define LAYER_SETUP 1
@@ -195,7 +201,7 @@ static void tick_handler(struct k_work *work) {
     case MODE_SETUP_BATT: {
         uint8_t soc = zmk_battery_state_of_charge();
 
-        if (soc <= 5) {
+        if (soc <= LOW_BATT_PERCENT) {
             /* critical: LED_0 blinks, 250 ms on / 250 ms off */
             batt_blink_on = !batt_blink_on;
             leds_set(batt_blink_on ? 0x01 : 0x00);
@@ -249,17 +255,28 @@ static void tick_handler(struct k_work *work) {
         return;
 
     case MODE_NORMAL:
-    default:
-        if (zmk_ble_active_profile_is_connected()) {
-            leds_set(0);
-            tick_count = 0;
-        } else {
-            /* 2 ticks on, 2 ticks off = 500 ms / 500 ms */
-            bool on = ((tick_count++ / 2) % 2) == 0;
-            leds_set(on ? profile_mask() : 0);
+    default: {
+        uint8_t mask = 0;
+
+        /* BLE not connected: LED of the active profile, 500 ms on / 500 ms off */
+        if (!zmk_ble_active_profile_is_connected() && ((tick_count / 2) % 2) == 0) {
+            mask |= profile_mask();
         }
+
+        /* Low battery: LED_0 blinks 250 ms on / 250 ms off (overrides LED_0 above) */
+        if (k_uptime_get() > LOW_BATT_GRACE_MS &&
+            zmk_battery_state_of_charge() <= LOW_BATT_PERCENT) {
+            mask &= (uint8_t)~0x01U;
+            if ((tick_count % 2) == 0) {
+                mask |= 0x01;
+            }
+        }
+
+        tick_count++;
+        leds_set(mask);
         k_work_reschedule(&tick_work, K_MSEC(TICK_MS));
         return;
+    }
     }
 }
 
