@@ -2,7 +2,8 @@
  * Setup mode + 4-LED indicator for twelvepad.
  *
  * Normal state:
- *   - boot / wake: all LEDs on for 500 ms, then off
+ *   - boot / wake: all LEDs on for 500 ms, then only the LED of the active
+ *     BLE profile stays on for another 500 ms, then all off
  *   - BLE not connected: the LED of the active profile blinks (500 ms on / 500 ms off)
  *   - battery <= 5 %: LED_0 blinks (250 ms on / 250 ms off), checked every tick
  *
@@ -106,6 +107,7 @@ static enum mode mode = MODE_BOOT;
 static uint32_t tick_count;
 static bool setup_flash_on;
 static bool batt_blink_on;
+static uint8_t boot_phase;
 static bool enter_armed;
 static size_t sleep_pos;
 static bool sleep_waiting;
@@ -188,6 +190,13 @@ static void start_sleep(void) {
 static void tick_handler(struct k_work *work) {
     switch (mode) {
     case MODE_BOOT:
+        if (boot_phase == 0) {
+            /* phase 1: keep only the LED of the active BLE profile on */
+            boot_phase = 1;
+            leds_set(profile_mask());
+            k_work_reschedule(&tick_work, K_MSEC(500));
+            return;
+        }
         leds_set(0);
         go_normal();
         return;
@@ -374,8 +383,10 @@ static int setup_mode_init(void) {
 
     k_work_init_delayable(&tick_work, tick_handler);
 
-    /* Boot / wake: all LEDs on for 500 ms, then off (MODE_BOOT handler). */
+    /* Boot / wake: all LEDs on for 500 ms (phase 0), then the active profile's
+     * LED for 500 ms (phase 1), then off (MODE_BOOT handler). */
     mode = MODE_BOOT;
+    boot_phase = 0;
     leds_set(LED_ALL);
     k_work_reschedule(&tick_work, K_MSEC(500));
     return 0;
