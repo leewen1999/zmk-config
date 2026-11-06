@@ -23,6 +23,6 @@ include:
     shield: twelvepad
     artifact-name: twelvepad
 
-  # - board: nice_nano_v2
-    # shield: settings_reset
-    # artifact-name: settings_reset
+  - board: nice_nano_v2
+    shield: settings_reset
+    artifact-name: settings_reset

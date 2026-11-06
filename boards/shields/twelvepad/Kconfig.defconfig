@@ -1,6 +1,6 @@
 if SHIELD_TWELVEPAD
 
 config ZMK_KEYBOARD_NAME
-    default "WS_BTroller"
+    default "twelvepad"
 
 endif # SHIELD_TWELVEPAD
