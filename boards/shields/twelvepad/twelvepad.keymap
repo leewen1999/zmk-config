@@ -1,106 +1,102 @@
-// twelvepad - 12 keys (SW1 top .. SW12 bottom), direct GPIO
+// twelvepad - 12 keys (SW1 top .. SW12 bottom), direct GPIO, "setup mode"
 //
-//  pos  SW   key
-//   0   SW1  1
-//   1   SW2  2
-//   2   SW3  3
-//   3   SW4  4
-//   4   SW5  UP
-//   5   SW6  RIGHT
-//   6   SW7  DOWN
-//   7   SW8  LEFT
-//   8   SW9  ENTER
-//   9   SW10 SPACE
-//  10   SW11 Z
-//  11   SW12 X
+// Normal layer (0):
+//   SW1..SW4 = 1 2 3 4, SW5..SW8 = UP RIGHT DOWN LEFT, SW9 = ENTER,
+//   SW10 = SPACE (tap) / hold > 500 ms then release = enter setup mode,
+//   SW11 = Z, SW12 = X
 //
-// Combos (SW10 = position 9 is the "function" key):
-//   SW10 + SW1..SW4   -> BT_SEL 0..3
-//   SW10 + SW12 (hold)-> show current BT profile on LEDs
-//   SW10 + SW11 (hold)-> show battery level on LEDs
-//   SW9  + SW10 (hold 2s) -> LED animation, then soft off (any key wakes)
+// Setup layer (1), entered with SW10 long press. All LEDs flash every 250 ms.
+//   SW1..SW4  click -> BT_SEL 0..3, leave setup mode
+//   SW5..SW8  click -> BT_CLR for profile 0..3 (selects it, clears it), leave setup mode
+//   SW9       click -> sleep (LED animation, then soft off once no key is held)
+//   SW10      click -> nothing, leave setup mode
+//   SW11      hold  -> battery level on LEDs, release = LEDs off + leave setup mode
+//   SW12      hold  -> current BT profile on LEDs, release = LEDs off + leave setup mode
+//
+// Sleep layer (2): everything disabled while the sleep animation runs.
 
 #include <behaviors.dtsi>
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/bt.h>
 
-// &led_ind parameters
-#define LED_SHOW_PROFILE 1
-#define LED_SHOW_BATTERY 2
-#define LED_SLEEP_ANIM   3
+// &sm parameters (keep in sync with src/setup_mode.c)
+#define SM_ENTER    1   // used by hold-tap: arms on hold, enters setup mode on release
+#define SM_EXIT     2   // leave setup mode now
+#define SM_CANCEL   3   // leave setup mode on release (SW10 click)
+#define SM_BATTERY  4   // hold: show battery, release: leave setup mode
+#define SM_PROFILE  5   // hold: show BT profile, release: leave setup mode
+#define SM_SLEEP    6   // on release: start sleep sequence
 
 / {
     behaviors {
-        // Soft off, immediate (the 2 s hold is done by sleep_hold below)
-        soft_off_now: soft_off_now {
-            compatible = "zmk,behavior-soft-off";
-            #binding-cells = <0>;
-            hold-time-ms = <0>;
-        };
-
-        // Hold 2 s to run sleep_macro; releasing earlier does nothing
-        sleep_hold: sleep_hold {
+        // SW10: tap = SPACE, hold > 500 ms = setup mode (entered on release)
+        setup_ht: setup_ht {
             compatible = "zmk,behavior-hold-tap";
             #binding-cells = <2>;
             flavor = "tap-preferred";
-            tapping-term-ms = <2000>;
-            bindings = <&sleep_macro>, <&none>;
+            tapping-term-ms = <500>;
+            bindings = <&sm>, <&kp>;
         };
     };
 
     macros {
-        // Start the LED animation (takes 3 s), wait, then soft off
-        sleep_macro: sleep_macro {
+        sm_sel0: sm_sel0 {
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
-            wait-ms = <0>;
+            wait-ms = <20>;
             tap-ms = <10>;
-            bindings
-                = <&macro_wait_time 3100>
-                , <&macro_tap>
-                , <&led_ind LED_SLEEP_ANIM>
-                , <&soft_off_now>
-                ;
+            bindings = <&macro_tap>, <&bt BT_SEL 0>, <&sm SM_EXIT>;
         };
-    };
+        sm_sel1: sm_sel1 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <20>;
+            tap-ms = <10>;
+            bindings = <&macro_tap>, <&bt BT_SEL 1>, <&sm SM_EXIT>;
+        };
+        sm_sel2: sm_sel2 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <20>;
+            tap-ms = <10>;
+            bindings = <&macro_tap>, <&bt BT_SEL 2>, <&sm SM_EXIT>;
+        };
+        sm_sel3: sm_sel3 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <20>;
+            tap-ms = <10>;
+            bindings = <&macro_tap>, <&bt BT_SEL 3>, <&sm SM_EXIT>;
+        };
 
-    combos {
-        compatible = "zmk,combos";
-
-        combo_bt_sel_0 {
-            timeout-ms = <60>;
-            key-positions = <9 0>;
-            bindings = <&bt BT_SEL 0>;
+        // BT_CLR only clears the *current* profile, so select it first.
+        sm_clr0: sm_clr0 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <50>;
+            tap-ms = <10>;
+            bindings = <&macro_tap>, <&bt BT_SEL 0>, <&bt BT_CLR>, <&sm SM_EXIT>;
         };
-        combo_bt_sel_1 {
-            timeout-ms = <60>;
-            key-positions = <9 1>;
-            bindings = <&bt BT_SEL 1>;
+        sm_clr1: sm_clr1 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <50>;
+            tap-ms = <10>;
+            bindings = <&macro_tap>, <&bt BT_SEL 1>, <&bt BT_CLR>, <&sm SM_EXIT>;
         };
-        combo_bt_sel_2 {
-            timeout-ms = <60>;
-            key-positions = <9 2>;
-            bindings = <&bt BT_SEL 2>;
+        sm_clr2: sm_clr2 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <50>;
+            tap-ms = <10>;
+            bindings = <&macro_tap>, <&bt BT_SEL 2>, <&bt BT_CLR>, <&sm SM_EXIT>;
         };
-        combo_bt_sel_3 {
-            timeout-ms = <60>;
-            key-positions = <9 3>;
-            bindings = <&bt BT_SEL 3>;
-        };
-        combo_show_profile {
-            timeout-ms = <60>;
-            key-positions = <9 11>;
-            bindings = <&led_ind LED_SHOW_PROFILE>;
-        };
-        combo_show_battery {
-            timeout-ms = <60>;
-            key-positions = <9 10>;
-            bindings = <&led_ind LED_SHOW_BATTERY>;
-        };
-        combo_sleep {
-            timeout-ms = <60>;
-            key-positions = <8 9>;
-            bindings = <&sleep_hold 0 0>;
+        sm_clr3: sm_clr3 {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <50>;
+            tap-ms = <10>;
+            bindings = <&macro_tap>, <&bt BT_SEL 3>, <&bt BT_CLR>, <&sm SM_EXIT>;
         };
     };
 
@@ -119,9 +115,36 @@
                 &kp DOWN
                 &kp LEFT
                 &kp ENTER
-                &kp SPACE
+                &setup_ht SM_ENTER SPACE
                 &kp Z
                 &kp X
+            >;
+        };
+
+        setup_layer {
+            display-name = "Setup";
+            bindings = <
+                &sm_sel0
+                &sm_sel1
+                &sm_sel2
+                &sm_sel3
+                &sm_clr0
+                &sm_clr1
+                &sm_clr2
+                &sm_clr3
+                &sm SM_SLEEP
+                &sm SM_CANCEL
+                &sm SM_BATTERY
+                &sm SM_PROFILE
+            >;
+        };
+
+        sleep_layer {
+            display-name = "Sleep";
+            bindings = <
+                &none &none &none &none
+                &none &none &none &none
+                &none &none &none &none
             >;
         };
     };

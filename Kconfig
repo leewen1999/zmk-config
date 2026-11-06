@@ -1,4 +1,4 @@
-config LED_INDICATOR
-    bool "4-LED indicator: BLE status blink, profile/battery display, boot/sleep animation"
+config SETUP_MODE
+    bool "Setup mode: 4-LED indicator, BLE profile keys, battery display, sleep sequence"
     depends on ZMK_BLE
     default n

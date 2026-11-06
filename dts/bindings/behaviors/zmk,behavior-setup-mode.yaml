@@ -1,0 +1,10 @@
+description: Setup mode behavior (LED indicator, battery/profile display, sleep sequence)
+
+compatible: "zmk,behavior-setup-mode"
+
+include: one_param.yaml
+
+properties:
+  led-gpios:
+    type: phandle-array
+    required: true

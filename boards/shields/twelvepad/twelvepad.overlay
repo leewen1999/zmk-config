@@ -43,10 +43,10 @@
         >;
     };
 
-    // 4 indicator LEDs (active high). Used through the &led_ind behavior
-    // and for the BLE status blink (see src/led_indicator.c).
-    led_ind: led_indicator {
-        compatible = "zmk,behavior-led-indicator";
+    // 4 indicator LEDs (active high) + "setup mode" behavior (see src/setup_mode.c).
+    // Used as &sm in the keymap.
+    sm: setup_mode {
+        compatible = "zmk,behavior-setup-mode";
         #binding-cells = <1>;
         led-gpios
             = <&gpio0  8 GPIO_ACTIVE_HIGH>  // LED_0 P0.08
