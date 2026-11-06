@@ -7,7 +7,9 @@
  *
  * Setup mode (keymap layer 1, entered by the &sm SM_ENTER hold behavior on release):
  *   - all LEDs flash with a 250 ms timer
- *   - SM_BATTERY (held): battery bar (1..4 LEDs); on release LEDs off + leave setup mode
+ *   - SM_BATTERY (held): battery bar (1..4 LEDs, 0-5 %: LED_0 blinks at 500 ms);
+ *                        on release LEDs off + leave setup mode
+ *   - SM_SELECTED_n (after BT_SEL n): leave setup mode, LED of profile n on for 500 ms
  *   - SM_PROFILE (held): LED of the active profile; on release LEDs off + leave setup mode
  *   - SM_SLEEP (on release): animation, then soft off once no key is held
  *   - SM_CANCEL (on release) / SM_EXIT (now): leave setup mode
@@ -54,6 +56,7 @@ enum {
     SM_BATTERY = 4,
     SM_PROFILE = 5,
     SM_SLEEP = 6,
+    SM_SELECTED_0 = 10, /* SM_SELECTED_0 .. SM_SELECTED_0 + 3 */
 };
 
 /* BLE profile index -> LED index. Change here to remap. */
@@ -88,6 +91,7 @@ enum mode {
     MODE_SETUP,
     MODE_SETUP_BATT,
     MODE_SETUP_PROFILE,
+    MODE_CONFIRM,
     MODE_SLEEP,
 };
 
@@ -95,6 +99,7 @@ static struct k_work_delayable tick_work;
 static enum mode mode = MODE_BOOT;
 static uint32_t tick_count;
 static bool setup_flash_on;
+static bool batt_blink_on;
 static bool enter_armed;
 static size_t sleep_pos;
 static bool sleep_waiting;
@@ -113,8 +118,8 @@ static uint8_t profile_mask(void) {
     return BIT(profile_to_led[idx]);
 }
 
-static uint8_t battery_mask(void) {
-    uint8_t soc = zmk_battery_state_of_charge();
+/* soc 6..100 -> 1..4 solid LEDs (0..5 % is handled separately: blinking) */
+static uint8_t battery_mask(uint8_t soc) {
     uint8_t n;
 
     if (soc <= 25) {
@@ -158,6 +163,14 @@ static void exit_setup(void) {
     go_normal();
 }
 
+/* Leave setup mode and light the LED of profile n for 500 ms. */
+static void show_selected(uint8_t profile) {
+    zmk_keymap_layer_to(LAYER_DEFAULT);
+    mode = MODE_CONFIRM;
+    leds_set(BIT(profile_to_led[profile]));
+    k_work_reschedule(&tick_work, K_MSEC(500));
+}
+
 static void start_sleep(void) {
     zmk_keymap_layer_to(LAYER_SLEEP);
     mode = MODE_SLEEP;
@@ -179,9 +192,25 @@ static void tick_handler(struct k_work *work) {
         k_work_reschedule(&tick_work, K_MSEC(SETUP_TICK_MS));
         return;
 
-    case MODE_SETUP_BATT:
-        leds_set(battery_mask());
-        k_work_reschedule(&tick_work, K_MSEC(500));
+    case MODE_SETUP_BATT: {
+        uint8_t soc = zmk_battery_state_of_charge();
+
+        if (soc <= 5) {
+            /* critical: LED_0 blinks, 250 ms on / 250 ms off */
+            batt_blink_on = !batt_blink_on;
+            leds_set(batt_blink_on ? 0x01 : 0x00);
+            k_work_reschedule(&tick_work, K_MSEC(250));
+        } else {
+            leds_set(battery_mask(soc));
+            k_work_reschedule(&tick_work, K_MSEC(500));
+        }
+        return;
+    }
+
+    case MODE_CONFIRM:
+        /* BT_SEL confirmation (500 ms) is over */
+        leds_set(0);
+        go_normal();
         return;
 
     case MODE_SETUP_PROFILE:
@@ -249,6 +278,7 @@ static int on_pressed(struct zmk_behavior_binding *binding,
     case SM_BATTERY:
         if (mode == MODE_SETUP) {
             mode = MODE_SETUP_BATT;
+            batt_blink_on = false;
             k_work_reschedule(&tick_work, K_NO_WAIT);
         }
         break;
@@ -259,6 +289,11 @@ static int on_pressed(struct zmk_behavior_binding *binding,
         }
         break;
     default:
+        if (binding->param1 >= SM_SELECTED_0 && binding->param1 < SM_SELECTED_0 + LED_COUNT) {
+            if (mode == MODE_SETUP) {
+                show_selected(binding->param1 - SM_SELECTED_0);
+            }
+        }
         break;
     }
     return ZMK_BEHAVIOR_OPAQUE;
