@@ -1,26 +1,35 @@
 /*
- * Setup mode + 4-LED indicator for twelvepad.
+ * Setup mode + LED indicators for twelvepad.
+ *
+ * LEDs: LED_0..LED_3 (one per BLE profile) + LED_LOWBAT (led-gpios index 4).
+ *
+ * Always (every mode / layer):
+ *   - battery <= 5 %: LED_LOWBAT blinks (250 ms on / 250 ms off), own timer.
+ *     Turned off before deep sleep / soft off.
  *
  * Normal state:
- *   - boot / wake: all LEDs on for 500 ms, then only the LED of the active
- *     BLE profile stays on for another 500 ms, then all off
+ *   - boot / wake: all profile LEDs on for 500 ms, then only the LED of the
+ *     active BLE profile stays on for another 500 ms, then all off
  *   - BLE not connected: the LED of the active profile blinks (500 ms on / 500 ms off)
- *   - battery <= 5 %: LED_0 blinks (250 ms on / 250 ms off), checked every tick
  *
  * Setup mode (keymap layer 1, entered by the &sm SM_ENTER hold behavior on release):
- *   - all LEDs flash with a 250 ms timer
- *   - SM_BATTERY (held): battery bar (1..4 LEDs, 0-5 %: LED_0 blinks at 500 ms);
- *                        on release LEDs off + leave setup mode
+ *   - all profile LEDs flash with a 250 ms timer
+ *   - SM_BATTERY (held): battery bar (1..4 LEDs); on release LEDs off + leave setup mode
  *   - SM_SELECTED_n (after BT_SEL n): leave setup mode, LED of profile n on for 500 ms
  *   - SM_PROFILE (held): LED of the active profile; on release LEDs off + leave setup mode
- *   - SM_SLEEP (on release): animation, then soft off once no key is held
+ *   - SM_SLEEP (on release): animation, then sleep once no key is held
+ *       CONFIG_SETUP_MODE_SOFT_OFF=n : ZMK deep sleep (needs CONFIG_ZMK_SLEEP=y)
+ *       CONFIG_SETUP_MODE_SOFT_OFF=y : soft off (needs CONFIG_ZMK_PM_SOFT_OFF=y)
  *   - SM_CANCEL (on release) / SM_EXIT (now): leave setup mode
+ *
+ * Idle timeout:
+ *   CONFIG_SETUP_MODE_SOFT_OFF=n : ZMK's own deep sleep (CONFIG_ZMK_IDLE_SLEEP_TIMEOUT)
+ *   CONFIG_SETUP_MODE_SOFT_OFF=y : own idle timer -> soft off
  *
  * Keymap layers: 0 = default, 1 = setup, 2 = sleep (all keys disabled).
  *
  * Power management: when ZMK suspends devices before deep sleep / soft off,
- * the PM hook below stops the timer and turns all LEDs off (otherwise a lit
- * LED stays lit during deep sleep).
+ * the PM hook below stops the timers and turns ALL LEDs off.
  */
 
 #define DT_DRV_COMPAT zmk_behavior_setup_mode
@@ -37,22 +46,45 @@
 #include <zmk/ble.h>
 #include <zmk/battery.h>
 #include <zmk/keymap.h>
+#include <zmk/event_manager.h>
+
+#ifdef CONFIG_SETUP_MODE_SOFT_OFF
+#include <zmk/events/position_state_changed.h>
+#else
+#if __has_include(<zmk/events/activity_state_changed.h>)
+#include <zmk/events/activity_state_changed.h>
+#define HAVE_ACTIVITY_EVENT 1
+#endif
+#if __has_include(<zmk/activity.h>)
+#include <zmk/activity.h>
+#endif
+#endif
 
 LOG_MODULE_REGISTER(setup_mode, CONFIG_ZMK_LOG_LEVEL);
 
 /* Provided by ZMK when CONFIG_ZMK_PM_SOFT_OFF=y. Weak so a missing symbol
- * does not break the build (the sleep sequence then just returns to normal). */
+ * does not break the build (soft off then just does not happen). */
 extern int zmk_pm_soft_off(void) __attribute__((weak));
+
+/* Can the sleep key do anything with the current configuration? */
+#ifdef CONFIG_SETUP_MODE_SOFT_OFF
+#define SLEEP_SUPPORTED 1
+#elif defined(CONFIG_ZMK_SLEEP) && defined(HAVE_ACTIVITY_EVENT)
+#define SLEEP_SUPPORTED 1
+#endif
 
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
 
-#define LED_COUNT 4
+#define LED_COUNT 4  /* profile LEDs: LED_0 .. LED_3 */
+#define LED_LOWBAT 4 /* index of LED_LOWBAT in led-gpios */
+#define LED_TOTAL 5
 #define LED_ALL ((1U << LED_COUNT) - 1U)
 #define TICK_MS 250
 #define SETUP_TICK_MS 250
 
-/* Low battery warning (default layer): LED_0 blinks at 250 ms when soc <= this. */
+/* Low battery warning: LED_LOWBAT blinks at 250 ms when soc <= this. */
 #define LOW_BATT_PERCENT 5
+#define LOWBAT_TICK_MS 250
 /* Ignore the battery value right after boot (it may not have been sampled yet). */
 #define LOW_BATT_GRACE_MS 5000
 
@@ -74,11 +106,12 @@ enum {
 /* BLE profile index -> LED index. Change here to remap. */
 static const uint8_t profile_to_led[LED_COUNT] = {0, 1, 2, 3};
 
-static const struct gpio_dt_spec leds[LED_COUNT] = {
+static const struct gpio_dt_spec leds[LED_TOTAL] = {
     GPIO_DT_SPEC_INST_GET_BY_IDX(0, led_gpios, 0),
     GPIO_DT_SPEC_INST_GET_BY_IDX(0, led_gpios, 1),
     GPIO_DT_SPEC_INST_GET_BY_IDX(0, led_gpios, 2),
     GPIO_DT_SPEC_INST_GET_BY_IDX(0, led_gpios, 3),
+    GPIO_DT_SPEC_INST_GET_BY_IDX(0, led_gpios, 4),
 };
 
 /* The key GPIOs owned by the kscan: only read, to check that no key is held. */
@@ -108,19 +141,52 @@ enum mode {
 };
 
 static struct k_work_delayable tick_work;
+static struct k_work_delayable lowbat_work;
 static enum mode mode = MODE_BOOT;
 static uint32_t tick_count;
 static bool setup_flash_on;
-static bool batt_blink_on;
+static bool lowbat_on;
 static uint8_t boot_phase;
 static bool enter_armed;
 static size_t sleep_pos;
 static bool sleep_waiting;
 
+#ifdef CONFIG_SETUP_MODE_SOFT_OFF
+static struct k_work_delayable idle_work;
+static int64_t last_activity;
+#endif
+
+/* ---- LEDs ---- */
+
+/* Profile LEDs LED_0..LED_3 (bit i = LED_i). LED_LOWBAT is handled separately. */
 static void leds_set(uint8_t mask) {
     for (int i = 0; i < LED_COUNT; i++) {
         gpio_pin_set_dt(&leds[i], (mask >> i) & 1U);
     }
+}
+
+static void lowbat_set(bool on) {
+    lowbat_on = on;
+    gpio_pin_set_dt(&leds[LED_LOWBAT], on ? 1 : 0);
+}
+
+static void lowbat_start(void) {
+    k_work_reschedule(&lowbat_work, K_NO_WAIT);
+}
+
+static void lowbat_stop(void) {
+    k_work_cancel_delayable(&lowbat_work);
+    lowbat_set(false);
+}
+
+static void lowbat_handler(struct k_work *work) {
+    if (k_uptime_get() > LOW_BATT_GRACE_MS &&
+        zmk_battery_state_of_charge() <= LOW_BATT_PERCENT) {
+        lowbat_set(!lowbat_on);
+    } else {
+        lowbat_set(false);
+    }
+    k_work_reschedule(&lowbat_work, K_MSEC(LOWBAT_TICK_MS));
 }
 
 static uint8_t profile_mask(void) {
@@ -131,7 +197,7 @@ static uint8_t profile_mask(void) {
     return BIT(profile_to_led[idx]);
 }
 
-/* soc 6..100 -> 1..4 solid LEDs (0..5 % is handled separately: blinking) */
+/* soc 0..25 -> 1 LED, 26..50 -> 2, 51..75 -> 3, 76..100 -> 4 */
 static uint8_t battery_mask(uint8_t soc) {
     uint8_t n;
 
@@ -156,6 +222,34 @@ static bool any_key_pressed(void) {
     return false;
 }
 
+/* ---- sleep ---- */
+
+/* Start the actual power down. Returns true if it was started (the system is
+ * about to go down), false if it is not possible with this configuration. */
+static bool power_down(void) {
+    leds_set(0);
+    lowbat_stop();
+
+#ifdef CONFIG_SETUP_MODE_SOFT_OFF
+    if (zmk_pm_soft_off == NULL) {
+        LOG_ERR("zmk_pm_soft_off not available");
+        return false;
+    }
+    zmk_pm_soft_off();
+    return true;
+#elif defined(CONFIG_ZMK_SLEEP) && defined(HAVE_ACTIVITY_EVENT)
+    /* Ask ZMK to go to deep sleep right now (same event as its idle timeout). */
+    raise_zmk_activity_state_changed(
+        (struct zmk_activity_state_changed){.state = ZMK_ACTIVITY_SLEEP});
+    return true;
+#else
+    LOG_ERR("no sleep method available (enable CONFIG_ZMK_SLEEP)");
+    return false;
+#endif
+}
+
+/* ---- modes ---- */
+
 static void go_normal(void) {
     mode = MODE_NORMAL;
     tick_count = 0;
@@ -173,6 +267,7 @@ static void exit_setup(void) {
     leds_set(0);
     zmk_keymap_layer_to(LAYER_DEFAULT);
     sleep_waiting = false;
+    lowbat_start();
     go_normal();
 }
 
@@ -184,6 +279,7 @@ static void show_selected(uint8_t profile) {
     k_work_reschedule(&tick_work, K_MSEC(500));
 }
 
+#ifdef SLEEP_SUPPORTED
 static void start_sleep(void) {
     zmk_keymap_layer_to(LAYER_SLEEP);
     mode = MODE_SLEEP;
@@ -191,6 +287,7 @@ static void start_sleep(void) {
     sleep_waiting = false;
     k_work_reschedule(&tick_work, K_NO_WAIT);
 }
+#endif
 
 static void tick_handler(struct k_work *work) {
     switch (mode) {
@@ -212,25 +309,9 @@ static void tick_handler(struct k_work *work) {
         k_work_reschedule(&tick_work, K_MSEC(SETUP_TICK_MS));
         return;
 
-    case MODE_SETUP_BATT: {
-        uint8_t soc = zmk_battery_state_of_charge();
-
-        if (soc <= LOW_BATT_PERCENT) {
-            /* critical: LED_0 blinks, 250 ms on / 250 ms off */
-            batt_blink_on = !batt_blink_on;
-            leds_set(batt_blink_on ? 0x01 : 0x00);
-            k_work_reschedule(&tick_work, K_MSEC(250));
-        } else {
-            leds_set(battery_mask(soc));
-            k_work_reschedule(&tick_work, K_MSEC(500));
-        }
-        return;
-    }
-
-    case MODE_CONFIRM:
-        /* BT_SEL confirmation (500 ms) is over */
-        leds_set(0);
-        go_normal();
+    case MODE_SETUP_BATT:
+        leds_set(battery_mask(zmk_battery_state_of_charge()));
+        k_work_reschedule(&tick_work, K_MSEC(500));
         return;
 
     case MODE_SETUP_PROFILE:
@@ -238,10 +319,17 @@ static void tick_handler(struct k_work *work) {
         k_work_reschedule(&tick_work, K_MSEC(200));
         return;
 
+    case MODE_CONFIRM:
+        /* BT_SEL confirmation (500 ms) is over */
+        leds_set(0);
+        go_normal();
+        return;
+
     case MODE_SLEEP:
+#ifdef SLEEP_SUPPORTED
         if (sleep_waiting) {
-            /* Soft off did not happen: go back to normal operation. */
-            LOG_ERR("soft off did not happen");
+            /* Power down did not happen: go back to normal operation. */
+            LOG_ERR("power down did not happen");
             exit_setup();
             return;
         }
@@ -257,15 +345,14 @@ static void tick_handler(struct k_work *work) {
             k_work_reschedule(&tick_work, K_NO_WAIT);
             return;
         }
-        leds_set(0);
-        if (zmk_pm_soft_off == NULL) {
-            LOG_ERR("zmk_pm_soft_off not available");
-            exit_setup();
-            return;
-        }
         sleep_waiting = true;
         k_work_reschedule(&tick_work, K_MSEC(2000)); /* fallback if we are still running */
-        zmk_pm_soft_off();
+        if (!power_down()) {
+            exit_setup();
+        }
+#else
+        exit_setup();
+#endif
         return;
 
     case MODE_NORMAL:
@@ -274,18 +361,8 @@ static void tick_handler(struct k_work *work) {
 
         /* BLE not connected: LED of the active profile, 500 ms on / 500 ms off */
         if (!zmk_ble_active_profile_is_connected() && ((tick_count / 2) % 2) == 0) {
-            mask |= profile_mask();
+            mask = profile_mask();
         }
-
-        /* Low battery: LED_0 blinks 250 ms on / 250 ms off (overrides LED_0 above) */
-        if (k_uptime_get() > LOW_BATT_GRACE_MS &&
-            zmk_battery_state_of_charge() <= LOW_BATT_PERCENT) {
-            mask &= (uint8_t)~0x01U;
-            if ((tick_count % 2) == 0) {
-                mask |= 0x01;
-            }
-        }
-
         tick_count++;
         leds_set(mask);
         k_work_reschedule(&tick_work, K_MSEC(TICK_MS));
@@ -293,6 +370,45 @@ static void tick_handler(struct k_work *work) {
     }
     }
 }
+
+/* ---- idle timeout -> soft off (only with CONFIG_SETUP_MODE_SOFT_OFF) ---- */
+
+#ifdef CONFIG_SETUP_MODE_SOFT_OFF
+static int activity_listener(const zmk_event_t *eh) {
+    if (as_zmk_position_state_changed(eh) != NULL) {
+        last_activity = k_uptime_get();
+    }
+    return ZMK_EV_EVENT_BUBBLE;
+}
+
+ZMK_LISTENER(setup_mode_activity, activity_listener);
+ZMK_SUBSCRIPTION(setup_mode_activity, zmk_position_state_changed);
+
+static void idle_start(void) {
+    last_activity = k_uptime_get();
+    k_work_reschedule(&idle_work, K_MSEC(CONFIG_SETUP_MODE_SOFT_OFF_TIMEOUT_MS));
+}
+
+static void idle_handler(struct k_work *work) {
+    int64_t idle = k_uptime_get() - last_activity;
+    int64_t timeout = CONFIG_SETUP_MODE_SOFT_OFF_TIMEOUT_MS;
+
+    if (idle < timeout) {
+        k_work_reschedule(&idle_work, K_MSEC(timeout - idle));
+        return;
+    }
+    if (any_key_pressed() || mode != MODE_NORMAL) {
+        idle_start();
+        return;
+    }
+    if (!power_down()) {
+        lowbat_start();
+        idle_start(); /* try again later */
+    }
+}
+#endif /* CONFIG_SETUP_MODE_SOFT_OFF */
+
+/* ---- behavior ---- */
 
 static int on_pressed(struct zmk_behavior_binding *binding,
                       struct zmk_behavior_binding_event event) {
@@ -309,7 +425,6 @@ static int on_pressed(struct zmk_behavior_binding *binding,
     case SM_BATTERY:
         if (mode == MODE_SETUP) {
             mode = MODE_SETUP_BATT;
-            batt_blink_on = false;
             k_work_reschedule(&tick_work, K_NO_WAIT);
         }
         break;
@@ -356,7 +471,11 @@ static int on_released(struct zmk_behavior_binding *binding,
         break;
     case SM_SLEEP:
         if (mode == MODE_SETUP) {
+#ifdef SLEEP_SUPPORTED
             start_sleep();
+#else
+            exit_setup(); /* no sleep method configured: just leave setup mode */
+#endif
         }
         break;
     default:
@@ -371,12 +490,19 @@ static int __maybe_unused setup_mode_pm_action(const struct device *dev,
     switch (action) {
     case PM_DEVICE_ACTION_SUSPEND:
         k_work_cancel_delayable(&tick_work);
+#ifdef CONFIG_SETUP_MODE_SOFT_OFF
+        k_work_cancel_delayable(&idle_work);
+#endif
         leds_set(0);
+        lowbat_stop();
         return 0;
     case PM_DEVICE_ACTION_RESUME:
         /* Normally the keyboard reboots on wake; if we resume without a reboot,
          * start again from a clean default state. */
         exit_setup();
+#ifdef CONFIG_SETUP_MODE_SOFT_OFF
+        idle_start();
+#endif
         return 0;
     default:
         return -ENOTSUP;
@@ -394,7 +520,7 @@ BEHAVIOR_DT_INST_DEFINE(0, NULL, PM_DEVICE_DT_INST_GET(0), NULL, NULL, POST_KERN
                         CONFIG_KERNEL_INIT_PRIORITY_DEFAULT, &setup_mode_driver_api);
 
 static int setup_mode_init(void) {
-    for (int i = 0; i < LED_COUNT; i++) {
+    for (int i = 0; i < LED_TOTAL; i++) {
         if (!gpio_is_ready_dt(&leds[i])) {
             LOG_ERR("LED %d gpio not ready", i);
             return -ENODEV;
@@ -407,9 +533,17 @@ static int setup_mode_init(void) {
     }
 
     k_work_init_delayable(&tick_work, tick_handler);
+    k_work_init_delayable(&lowbat_work, lowbat_handler);
+#ifdef CONFIG_SETUP_MODE_SOFT_OFF
+    k_work_init_delayable(&idle_work, idle_handler);
+    idle_start();
+#endif
 
-    /* Boot / wake: all LEDs on for 500 ms (phase 0), then the active profile's
-     * LED for 500 ms (phase 1), then off (MODE_BOOT handler). */
+    /* Low battery LED runs in every mode. */
+    lowbat_start();
+
+    /* Boot / wake: all profile LEDs on for 500 ms (phase 0), then the active
+     * profile's LED for 500 ms (phase 1), then off (MODE_BOOT handler). */
     mode = MODE_BOOT;
     boot_phase = 0;
     leds_set(LED_ALL);
