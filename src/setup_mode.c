@@ -21,6 +21,9 @@
  *       CONFIG_SETUP_MODE_SOFT_OFF=n : ZMK deep sleep (needs CONFIG_ZMK_SLEEP=y)
  *       CONFIG_SETUP_MODE_SOFT_OFF=y : soft off (needs CONFIG_ZMK_PM_SOFT_OFF=y)
  *   - SM_CANCEL (on release) / SM_EXIT (now): leave setup mode
+ *   - Sleep failure indicator (all profile LEDs flash, 100 ms):
+ *       4 flashes = sleep method not available (e.g. zmk_pm_soft_off not found)
+ *       2 flashes = sleep was requested but the system kept running
  *
  * Idle timeout:
  *   CONFIG_SETUP_MODE_SOFT_OFF=n : ZMK's own deep sleep (CONFIG_ZMK_IDLE_SLEEP_TIMEOUT)
@@ -138,6 +141,7 @@ enum mode {
     MODE_SETUP_PROFILE,
     MODE_CONFIRM,
     MODE_SLEEP,
+    MODE_ERROR,
 };
 
 static struct k_work_delayable tick_work;
@@ -150,6 +154,8 @@ static uint8_t boot_phase;
 static bool enter_armed;
 static size_t sleep_pos;
 static bool sleep_waiting;
+static uint8_t err_step;
+static uint8_t err_steps;
 
 #ifdef CONFIG_SETUP_MODE_SOFT_OFF
 static struct k_work_delayable idle_work;
@@ -279,6 +285,15 @@ static void show_selected(uint8_t profile) {
     k_work_reschedule(&tick_work, K_MSEC(500));
 }
 
+/* Visible error: all profile LEDs flash `flashes` times (100 ms on / 100 ms off). */
+static void show_error(uint8_t flashes) {
+    zmk_keymap_layer_to(LAYER_SLEEP); /* keys do nothing while flashing */
+    mode = MODE_ERROR;
+    err_step = 0;
+    err_steps = flashes * 2;
+    k_work_reschedule(&tick_work, K_NO_WAIT);
+}
+
 #ifdef SLEEP_SUPPORTED
 static void start_sleep(void) {
     zmk_keymap_layer_to(LAYER_SLEEP);
@@ -328,9 +343,11 @@ static void tick_handler(struct k_work *work) {
     case MODE_SLEEP:
 #ifdef SLEEP_SUPPORTED
         if (sleep_waiting) {
-            /* Power down did not happen: go back to normal operation. */
+            /* Power down was requested but the system kept running. */
             LOG_ERR("power down did not happen");
-            exit_setup();
+            sleep_waiting = false;
+            lowbat_start();
+            show_error(2);
             return;
         }
         if (sleep_pos < ARRAY_SIZE(sleep_anim)) {
@@ -348,11 +365,24 @@ static void tick_handler(struct k_work *work) {
         sleep_waiting = true;
         k_work_reschedule(&tick_work, K_MSEC(2000)); /* fallback if we are still running */
         if (!power_down()) {
-            exit_setup();
+            sleep_waiting = false;
+            lowbat_start();
+            show_error(4);
         }
 #else
         exit_setup();
 #endif
+        return;
+
+    case MODE_ERROR:
+        if (err_step >= err_steps) {
+            leds_set(0);
+            exit_setup();
+            return;
+        }
+        leds_set((err_step % 2) == 0 ? LED_ALL : 0);
+        err_step++;
+        k_work_reschedule(&tick_work, K_MSEC(100));
         return;
 
     case MODE_NORMAL:
@@ -403,6 +433,7 @@ static void idle_handler(struct k_work *work) {
     }
     if (!power_down()) {
         lowbat_start();
+        show_error(4);
         idle_start(); /* try again later */
     }
 }

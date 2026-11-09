@@ -1,16 +1,17 @@
 // twelvepad - 12 keys (SW1 top .. SW12 bottom), direct GPIO, "setup mode"
 //
 // Normal layer (0):
-//   SW1..SW4 = 1 2 3 4, SW5..SW8 = UP RIGHT DOWN LEFT, SW9 = ENTER,
-//   SW10 = SPACE (tap) / hold > 500 ms then release = enter setup mode,
+//   SW1..SW4 = 1 2 3 4, SW5..SW8 = UP RIGHT DOWN LEFT, 
+//   SW9 = ENTER (tap) / hold > 500 ms then release = enter setup mode,
+//   SW10 = SPACE,
 //   SW11 = Z, SW12 = X
 //
-// Setup layer (1), entered with SW10 long press. All LEDs flash every 250 ms.
+// Setup layer (1), entered with SW9 long press. All LEDs flash every 250 ms.
 //   SW1..SW4  click -> BT_SEL 0..3, leave setup mode, LED of that profile on for 500 ms
 //   SW5..SW8  click -> BT_CLR for profile 0..3 (selects it, clears it), leave setup mode
-//   SW9       click -> sleep (LED animation, then deep sleep or soft off, see .conf,
+//   SW9       click -> nothing, leave setup mode
+//   SW10      click -> sleep (LED animation, then deep sleep or soft off, see .conf,
 //                         once no key is held)
-//   SW10      click -> nothing, leave setup mode
 //   SW11      hold  -> battery level on LEDs (0-5 %: LED_0 blinks 500 ms), release = LEDs off + leave setup mode
 //   SW12      hold  -> current BT profile on LEDs, release = LEDs off + leave setup mode
 //
@@ -23,7 +24,7 @@
 // &sm parameters (keep in sync with src/setup_mode.c)
 #define SM_ENTER    1   // used by hold-tap: arms on hold, enters setup mode on release
 #define SM_EXIT     2   // leave setup mode now
-#define SM_CANCEL   3   // leave setup mode on release (SW10 click)
+#define SM_CANCEL   3   // leave setup mode on release (SW9 click)
 #define SM_BATTERY  4   // hold: show battery, release: leave setup mode
 #define SM_PROFILE  5   // hold: show BT profile, release: leave setup mode
 #define SM_SLEEP    6   // on release: start sleep sequence
@@ -34,7 +35,7 @@
 
 / {
     behaviors {
-        // SW10: tap = SPACE, hold > 500 ms = setup mode (entered on release)
+        // SW9: tap = ENTER, hold > 500 ms = setup mode (entered on release)
         setup_ht: setup_ht {
             compatible = "zmk,behavior-hold-tap";
             #binding-cells = <2>;
@@ -119,8 +120,8 @@
                 &kp RIGHT
                 &kp DOWN
                 &kp LEFT
-                &kp ENTER
-                &setup_ht SM_ENTER SPACE
+                &setup_ht SM_ENTER ENTER
+                &kp SPACE
                 &kp Z
                 &kp X
             >;
@@ -137,8 +138,8 @@
                 &sm_clr1
                 &sm_clr2
                 &sm_clr3
-                &sm SM_SLEEP
                 &sm SM_CANCEL
+                &sm SM_SLEEP
                 &sm SM_BATTERY
                 &sm SM_PROFILE
             >;
