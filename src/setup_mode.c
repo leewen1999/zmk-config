@@ -26,6 +26,8 @@
  * Idle timeout:
  *   CONFIG_SETUP_MODE_SOFT_OFF=n : ZMK's own deep sleep (CONFIG_ZMK_IDLE_SLEEP_TIMEOUT)
  *   CONFIG_SETUP_MODE_SOFT_OFF=y : own idle timer -> soft off
+ *                                  (CONFIG_SETUP_MODE_SOFT_OFF_TIMEOUT_MS=0 disables it, so
+ *                                   ZMK's deep sleep can handle the idle timeout instead)
  *
  * Keymap layers: 0 = default, 1 = setup, 2 = sleep (all keys disabled).
  *
@@ -387,7 +389,10 @@ ZMK_SUBSCRIPTION(setup_mode_activity, zmk_position_state_changed);
 
 static void idle_start(void) {
     last_activity = k_uptime_get();
-    k_work_reschedule(&idle_work, K_MSEC(CONFIG_SETUP_MODE_SOFT_OFF_TIMEOUT_MS));
+    /* timeout 0 = no idle soft off (ZMK's own deep sleep timer can be used instead) */
+    if (CONFIG_SETUP_MODE_SOFT_OFF_TIMEOUT_MS > 0) {
+        k_work_reschedule(&idle_work, K_MSEC(CONFIG_SETUP_MODE_SOFT_OFF_TIMEOUT_MS));
+    }
 }
 
 static void idle_handler(struct k_work *work) {

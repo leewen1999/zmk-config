@@ -14,9 +14,11 @@ config SETUP_MODE_SOFT_OFF
       On: both use soft off instead (needs CONFIG_ZMK_PM_SOFT_OFF=y; set
       CONFIG_ZMK_SLEEP=n so ZMK's own deep sleep timer does not interfere).
       After a soft off nothing wakes the keyboard except the reset button.
+      The idle soft off can be disabled with CONFIG_SETUP_MODE_SOFT_OFF_TIMEOUT_MS=0
+      (use it together with CONFIG_ZMK_SLEEP=y: idle -> deep sleep, sleep key -> soft off).
 
 config SETUP_MODE_SOFT_OFF_TIMEOUT_MS
-    int "Idle time before soft off (ms)"
+    int "Idle time before soft off (ms, 0 = no idle soft off)"
     depends on SETUP_MODE_SOFT_OFF
     default 600000
 
