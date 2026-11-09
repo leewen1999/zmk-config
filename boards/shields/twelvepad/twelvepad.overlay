@@ -59,9 +59,8 @@
             ;
     };
 
-    // Soft off: any key on the kscan above wakes the keyboard.
-    soft_off_wakers {
-        compatible = "zmk,soft-off-wakeup-sources";
-        wakeup-sources = <&kscan>;
-    };
+    // No "zmk,soft-off-wakeup-sources" node on purpose: after a soft off nothing
+    // wakes the keyboard except the reset button (lowest power).
+    // Deep sleep (CONFIG_ZMK_SLEEP) still wakes on any key through the
+    // `wakeup-source` property of the kscan above.
 };

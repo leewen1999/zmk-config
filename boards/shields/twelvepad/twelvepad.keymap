@@ -1,7 +1,7 @@
 // twelvepad - 12 keys (SW1 top .. SW12 bottom), direct GPIO, "setup mode"
 //
 // Normal layer (0):
-//   SW1..SW4 = 1 2 3 4, SW5..SW8 = UP RIGHT DOWN LEFT, 
+//   SW1..SW4 = 1 2 3 4, SW5..SW8 = UP RIGHT DOWN LEFT,
 //   SW9 = ENTER (tap) / hold > 500 ms then release = enter setup mode,
 //   SW10 = SPACE,
 //   SW11 = Z, SW12 = X
@@ -12,7 +12,7 @@
 //   SW9       click -> nothing, leave setup mode
 //   SW10      click -> sleep (LED animation, then deep sleep or soft off, see .conf,
 //                         once no key is held)
-//   SW11      hold  -> battery level on LEDs (0-5 %: LED_0 blinks 500 ms), release = LEDs off + leave setup mode
+//   SW11      hold  -> battery level on LEDs (1..4), release = LEDs off + leave setup mode
 //   SW12      hold  -> current BT profile on LEDs, release = LEDs off + leave setup mode
 //
 // Sleep layer (2): everything disabled while the sleep animation runs.
