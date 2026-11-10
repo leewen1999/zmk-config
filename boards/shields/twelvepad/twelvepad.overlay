@@ -16,8 +16,8 @@
 
         // Key order = SW1 .. SW12 (top to bottom); must match twelvepad.keymap
         input-gpios
-            = <&gpio1 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW1  P1.13  "1"
-            , <&gpio1  0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW2  P1.00  "2"
+            = <&gpio1  0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW1  P1.00  "1"
+            , <&gpio1 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW2  P1.13  "2"
             , <&gpio0 24 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW3  P0.24  "3"
             , <&gpio1 15 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW4  P1.15  "4"
             , <&gpio0  2 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW5  P0.02  UP
