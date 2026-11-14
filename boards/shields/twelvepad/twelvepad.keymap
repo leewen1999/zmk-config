@@ -1,4 +1,6 @@
-// twelvepad - 12 keys (SW1 top .. SW12 bottom), direct GPIO, "setup mode"
+// twelvepad (nice!view version) - 12 keys (SW1 top .. SW12 bottom), direct GPIO, "setup mode"
+// The nice!view shows the BT profile, battery and the active layer name
+// (Default / Setup / Sleep), so no profile / battery LEDs are needed.
 //
 // Normal layer (0):
 //   SW1..SW4 = 1 2 3 4, SW5..SW8 = UP RIGHT DOWN LEFT,
@@ -6,16 +8,15 @@
 //   SW10 = SPACE,
 //   SW11 = Z, SW12 = X
 //
-// Setup layer (1), entered with SW9 long press. All LEDs flash every 250 ms.
-//   SW1..SW4  click -> BT_SEL 0..3, leave setup mode, LED of that profile on for 500 ms
+// Setup layer (1) ("Setup" on the display):
+//   SW1..SW4  click -> BT_SEL 0..3, leave setup mode
 //   SW5..SW8  click -> BT_CLR for profile 0..3 (selects it, clears it), leave setup mode
 //   SW9       click -> nothing, leave setup mode
-//   SW10      click -> sleep (LED animation, then deep sleep or soft off, see .conf,
-//                         once no key is held)
-//   SW11      hold  -> battery level on LEDs (1..4), release = LEDs off + leave setup mode
-//   SW12      hold  -> current BT profile on LEDs, release = LEDs off + leave setup mode
+//   SW10      click -> sleep ("Sleep" on the display for 1 s, then deep sleep or soft off,
+//                       see .conf, once no key is held)
+//   SW11/SW12 click -> nothing, leave setup mode
 //
-// Sleep layer (2): everything disabled while the sleep animation runs.
+// Sleep layer (2): everything disabled while waiting for the sleep.
 
 #include <behaviors.dtsi>
 #include <dt-bindings/zmk/keys.h>
@@ -24,14 +25,8 @@
 // &sm parameters (keep in sync with src/setup_mode.c)
 #define SM_ENTER    1   // used by hold-tap: arms on hold, enters setup mode on release
 #define SM_EXIT     2   // leave setup mode now
-#define SM_CANCEL   3   // leave setup mode on release (SW9 click)
-#define SM_BATTERY  4   // hold: show battery, release: leave setup mode
-#define SM_PROFILE  5   // hold: show BT profile, release: leave setup mode
+#define SM_CANCEL   3   // leave setup mode on release
 #define SM_SLEEP    6   // on release: start sleep sequence
-#define SM_SELECTED_0 10 // leave setup mode, LED of profile 0 on for 500 ms
-#define SM_SELECTED_1 11 // ... profile 1
-#define SM_SELECTED_2 12 // ... profile 2
-#define SM_SELECTED_3 13 // ... profile 3
 
 / {
     behaviors {
@@ -51,28 +46,28 @@
             #binding-cells = <0>;
             wait-ms = <20>;
             tap-ms = <10>;
-            bindings = <&macro_tap>, <&bt BT_SEL 0>, <&sm SM_SELECTED_0>;
+            bindings = <&macro_tap>, <&bt BT_SEL 0>, <&sm SM_EXIT>;
         };
         sm_sel1: sm_sel1 {
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
             wait-ms = <20>;
             tap-ms = <10>;
-            bindings = <&macro_tap>, <&bt BT_SEL 1>, <&sm SM_SELECTED_1>;
+            bindings = <&macro_tap>, <&bt BT_SEL 1>, <&sm SM_EXIT>;
         };
         sm_sel2: sm_sel2 {
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
             wait-ms = <20>;
             tap-ms = <10>;
-            bindings = <&macro_tap>, <&bt BT_SEL 2>, <&sm SM_SELECTED_2>;
+            bindings = <&macro_tap>, <&bt BT_SEL 2>, <&sm SM_EXIT>;
         };
         sm_sel3: sm_sel3 {
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
             wait-ms = <20>;
             tap-ms = <10>;
-            bindings = <&macro_tap>, <&bt BT_SEL 3>, <&sm SM_SELECTED_3>;
+            bindings = <&macro_tap>, <&bt BT_SEL 3>, <&sm SM_EXIT>;
         };
 
         // BT_CLR only clears the *current* profile, so select it first.
@@ -140,8 +135,8 @@
                 &sm_clr3
                 &sm SM_CANCEL
                 &sm SM_SLEEP
-                &sm SM_BATTERY
-                &sm SM_PROFILE
+                &sm SM_CANCEL
+                &sm SM_CANCEL
             >;
         };
 

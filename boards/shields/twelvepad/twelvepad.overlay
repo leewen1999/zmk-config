@@ -1,7 +1,8 @@
-// twelvepad - 12 keys, direct GPIO (no matrix, no diodes) + 5 indicator LEDs
+// twelvepad - 12 keys, direct GPIO (no matrix, no diodes) + nice!view + low battery LED
 // Each switch connects between its GPIO pin and GND (internal pull-up).
 
 #include <dt-bindings/zmk/matrix_transform.h>
+#include <zephyr/dt-bindings/pinctrl/nrf-pinctrl.h>
 
 #include "twelvepad-layouts.dtsi"
 
@@ -43,24 +44,48 @@
         >;
     };
 
-    // 5 indicator LEDs (active high) + "setup mode" behavior (see src/setup_mode.c).
-    // Used as &sm in the keymap. The ORDER matters:
-    //   index 0..3 = LED_0..LED_3 (one per BT profile), index 4 = LED_LOWBAT.
-    // P0.09 / P0.10 are NFC pins: CONFIG_NFCT_PINS_AS_GPIOS=y is required (see .conf).
+    // Setup mode behavior (see src/setup_mode.c, used as &sm in the keymap)
+    // + low battery LED (P0.15, the onboard LED, active high).
     sm: setup_mode {
         compatible = "zmk,behavior-setup-mode";
         #binding-cells = <1>;
-        led-gpios
-            = <&gpio0 11 GPIO_ACTIVE_HIGH>  // LED_0      P0.11
-            , <&gpio1 11 GPIO_ACTIVE_HIGH>  // LED_1      P1.11
-            , <&gpio0 10 GPIO_ACTIVE_HIGH>  // LED_2      P0.10 (NFC pin)
-            , <&gpio0  9 GPIO_ACTIVE_HIGH>  // LED_3      P0.09 (NFC pin)
-            , <&gpio0 15 GPIO_ACTIVE_HIGH>  // LED_LOWBAT P0.15 (onboard LED)
-            ;
+        lowbat-gpios = <&gpio0 15 GPIO_ACTIVE_HIGH>;  // LED_LOWBAT P0.15
     };
 
     // No "zmk,soft-off-wakeup-sources" node on purpose: after a soft off nothing
     // wakes the keyboard except the reset button (lowest power).
     // Deep sleep (CONFIG_ZMK_SLEEP) still wakes on any key through the
     // `wakeup-source` property of the kscan above.
+};
+
+// ---------------------------------------------------------------------------
+// nice!view on its own SPI bus (the ZMK nice_view shield needs "nice_view_spi"):
+//   CS   = P0.09   SCK = P0.10   MOSI = P1.11   (MISO not used)
+//   VCC -> nice!nano VCC pin, GND -> GND
+// P0.09 / P0.10 are NFC pins: CONFIG_NFCT_PINS_AS_GPIOS=y is required (see .conf).
+// ---------------------------------------------------------------------------
+&pinctrl {
+    spi2_niceview_default: spi2_niceview_default {
+        group1 {
+            psels = <NRF_PSEL(SPIM_SCK, 0, 10)>,
+                    <NRF_PSEL(SPIM_MOSI, 1, 11)>;
+        };
+    };
+
+    spi2_niceview_sleep: spi2_niceview_sleep {
+        group1 {
+            psels = <NRF_PSEL(SPIM_SCK, 0, 10)>,
+                    <NRF_PSEL(SPIM_MOSI, 1, 11)>;
+            low-power-enable;
+        };
+    };
+};
+
+nice_view_spi: &spi2 {
+    compatible = "nordic,nrf-spim";
+    status = "okay";
+    pinctrl-0 = <&spi2_niceview_default>;
+    pinctrl-1 = <&spi2_niceview_sleep>;
+    pinctrl-names = "default", "sleep";
+    cs-gpios = <&gpio0 9 GPIO_ACTIVE_HIGH>;
 };
