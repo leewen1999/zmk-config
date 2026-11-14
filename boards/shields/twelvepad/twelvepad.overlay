@@ -60,22 +60,22 @@
 
 // ---------------------------------------------------------------------------
 // nice!view on its own SPI bus (the ZMK nice_view shield needs "nice_view_spi"):
-//   CS   = P0.09   SCK = P0.10   MOSI = P1.11   (MISO not used)
+//   CS   = P0.11   SCK = P1.11   MOSI = P0.10   (MISO not used)
 //   VCC -> nice!nano VCC pin, GND -> GND
 // P0.09 / P0.10 are NFC pins: CONFIG_NFCT_PINS_AS_GPIOS=y is required (see .conf).
 // ---------------------------------------------------------------------------
 &pinctrl {
     spi2_niceview_default: spi2_niceview_default {
         group1 {
-            psels = <NRF_PSEL(SPIM_SCK, 0, 10)>,
-                    <NRF_PSEL(SPIM_MOSI, 1, 11)>;
+            psels = <NRF_PSEL(SPIM_SCK, 1, 11)>,
+                    <NRF_PSEL(SPIM_MOSI, 0, 10)>;
         };
     };
 
     spi2_niceview_sleep: spi2_niceview_sleep {
         group1 {
-            psels = <NRF_PSEL(SPIM_SCK, 0, 10)>,
-                    <NRF_PSEL(SPIM_MOSI, 1, 11)>;
+            psels = <NRF_PSEL(SPIM_SCK, 1, 11)>,
+                    <NRF_PSEL(SPIM_MOSI, 1, 10)>;
             low-power-enable;
         };
     };
@@ -87,5 +87,5 @@ nice_view_spi: &spi2 {
     pinctrl-0 = <&spi2_niceview_default>;
     pinctrl-1 = <&spi2_niceview_sleep>;
     pinctrl-names = "default", "sleep";
-    cs-gpios = <&gpio0 9 GPIO_ACTIVE_HIGH>;
+    cs-gpios = <&gpio0 11 GPIO_ACTIVE_HIGH>;
 };

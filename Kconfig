@@ -23,20 +23,3 @@ config SETUP_MODE_SOFT_OFF_TIMEOUT_MS
     default 600000
 
 endif # SETUP_MODE
-
-config TWELVEPAD_DISPLAY_TWEAKS
-    bool "nice!view tweaks on top of the built-in status screen (rotation, BLE symbol)"
-    depends on ZMK_DISPLAY
-    default n
-
-if TWELVEPAD_DISPLAY_TWEAKS
-
-config TWELVEPAD_DISPLAY_ROTATE_180
-    bool "Rotate the display picture by 180 degrees (LVGL software rotation)"
-    default n
-
-config TWELVEPAD_DISPLAY_BLE_SYMBOL
-    bool "Show the Bluetooth symbol instead of the Wi-Fi symbol for BLE"
-    default n
-
-endif # TWELVEPAD_DISPLAY_TWEAKS
