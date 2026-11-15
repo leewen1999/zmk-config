@@ -105,7 +105,7 @@
         compatible = "zmk,keymap";
 
         default_layer {
-            display-name = "Game";
+            display-name = "Default";
             bindings = <
                 &kp N1
                 &kp N2
@@ -123,7 +123,7 @@
         };
 
         setup_layer {
-            display-name = "Setting";
+            display-name = "Setup";
             bindings = <
                 &sm_sel0
                 &sm_sel1
@@ -141,7 +141,7 @@
         };
 
         sleep_layer {
-            display-name = "PowerOff";
+            display-name = "Sleep";
             bindings = <
                 &none &none &none &none
                 &none &none &none &none

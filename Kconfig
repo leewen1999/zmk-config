@@ -39,4 +39,8 @@ config TWELVEPAD_DISPLAY_BLE_SYMBOL
     bool "Show the Bluetooth symbol instead of the Wi-Fi symbol for BLE"
     default n
 
+config TWELVEPAD_DISPLAY_LAYER_SYMBOL
+    bool "Show other symbols in front of some layer names (settings / power)"
+    default n
+
 endif # TWELVEPAD_DISPLAY_TWEAKS

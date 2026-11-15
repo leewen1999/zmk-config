@@ -9,6 +9,11 @@
  *    The edit is done in place (both glyphs are 3 bytes in UTF-8), because
  *    lv_label_set_text() must not be called while rendering.
  *
+ *  - CONFIG_TWELVEPAD_DISPLAY_LAYER_SYMBOL: the layer widget draws the LVGL keyboard glyph
+ *    in front of the layer name. For the layers listed in layer_symbols[] below, the
+ *    glyph is replaced (e.g. "Setup" -> settings glyph, "Sleep" -> power glyph). Same
+ *    render-start hook, same in-place edit (all glyphs are 3 bytes in UTF-8).
+ *
  *  - CONFIG_TWELVEPAD_DISPLAY_ROTATE_180 (experimental): turn the picture by 180
  *    degrees (LVGL software rotation), applied once from a one-shot LVGL timer.
  */
@@ -26,19 +31,56 @@ LOG_MODULE_REGISTER(display_tweaks, CONFIG_ZMK_LOG_LEVEL);
 #define HOOK_RETRY_MS 100
 #define HOOK_RETRY_MAX 100 /* 10 s */
 
-#ifdef CONFIG_TWELVEPAD_DISPLAY_BLE_SYMBOL
+#if defined(CONFIG_TWELVEPAD_DISPLAY_BLE_SYMBOL) || defined(CONFIG_TWELVEPAD_DISPLAY_LAYER_SYMBOL)
 
 static struct k_work_delayable hook_work;
 static int hook_tries;
 
-/* Replace the Wi-Fi glyph by the Bluetooth glyph in every label of the screen. */
+#ifdef CONFIG_TWELVEPAD_DISPLAY_LAYER_SYMBOL
+/* Layer name (the keymap "display-name") -> glyph shown in front of it.
+ * Layers that are not listed keep the keyboard glyph. Keep the names in sync with
+ * the display-name properties in twelvepad.keymap. */
+static const struct {
+    const char *name;
+    const char *symbol;
+} layer_symbols[] = {
+    {"Setup", LV_SYMBOL_SETTINGS},
+    {"Sleep", LV_SYMBOL_POWER},
+};
+#endif
+
+/* Edit the texts of all labels of the screen in place (before they are drawn). */
 static void patch_labels(lv_obj_t *obj) {
     if (lv_obj_check_type(obj, &lv_label_class)) {
         char *text = lv_label_get_text(obj);
-        char *pos = (text != NULL) ? strstr(text, LV_SYMBOL_WIFI) : NULL;
 
-        if (pos != NULL) {
-            memcpy(pos, LV_SYMBOL_BLUETOOTH, strlen(LV_SYMBOL_BLUETOOTH));
+        if (text != NULL) {
+#ifdef CONFIG_TWELVEPAD_DISPLAY_BLE_SYMBOL
+            /* Wi-Fi glyph -> Bluetooth glyph */
+            char *pos = strstr(text, LV_SYMBOL_WIFI);
+
+            if (pos != NULL) {
+                memcpy(pos, LV_SYMBOL_BLUETOOTH, strlen(LV_SYMBOL_BLUETOOTH));
+            }
+#endif
+#ifdef CONFIG_TWELVEPAD_DISPLAY_LAYER_SYMBOL
+            /* "<keyboard glyph>[ ]<layer name>" -> "<other glyph>[ ]<layer name>" */
+            size_t glyph_len = strlen(LV_SYMBOL_KEYBOARD);
+
+            if (strncmp(text, LV_SYMBOL_KEYBOARD, glyph_len) == 0) {
+                const char *name = text + glyph_len;
+
+                while (*name == ' ') {
+                    name++;
+                }
+                for (size_t i = 0; i < ARRAY_SIZE(layer_symbols); i++) {
+                    if (strcmp(name, layer_symbols[i].name) == 0) {
+                        memcpy(text, layer_symbols[i].symbol, glyph_len);
+                        break;
+                    }
+                }
+            }
+#endif
         }
     }
 
@@ -79,7 +121,7 @@ static void hook_handler(struct k_work *work) {
     }
 }
 
-#endif /* CONFIG_TWELVEPAD_DISPLAY_BLE_SYMBOL */
+#endif /* BLE_SYMBOL || LAYER_SYMBOL */
 
 #ifdef CONFIG_TWELVEPAD_DISPLAY_ROTATE_180
 static struct k_work_delayable rotate_work;
@@ -100,7 +142,7 @@ static void rotate_handler(struct k_work *work) {
 #endif /* CONFIG_TWELVEPAD_DISPLAY_ROTATE_180 */
 
 static int display_tweaks_init(void) {
-#ifdef CONFIG_TWELVEPAD_DISPLAY_BLE_SYMBOL
+#if defined(CONFIG_TWELVEPAD_DISPLAY_BLE_SYMBOL) || defined(CONFIG_TWELVEPAD_DISPLAY_LAYER_SYMBOL)
     k_work_init_delayable(&hook_work, hook_handler);
     if (!install_hook()) {
         k_work_schedule(&hook_work, K_MSEC(HOOK_RETRY_MS));
