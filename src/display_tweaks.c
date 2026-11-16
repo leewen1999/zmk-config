@@ -11,7 +11,7 @@
  *
  *  - CONFIG_TWELVEPAD_DISPLAY_LAYER_SYMBOL: the layer widget draws the LVGL keyboard glyph
  *    in front of the layer name. For the layers listed in layer_symbols[] below, the
- *    glyph is replaced (e.g. "Setup" -> settings glyph, "Sleep" -> power glyph). Same
+ *    glyph is replaced (e.g. "SETTING" -> settings glyph, "POWER" -> power glyph). Same
  *    render-start hook, same in-place edit (all glyphs are 3 bytes in UTF-8).
  *
  *  - CONFIG_TWELVEPAD_DISPLAY_ROTATE_180 (experimental): turn the picture by 180
@@ -44,8 +44,9 @@ static const struct {
     const char *name;
     const char *symbol;
 } layer_symbols[] = {
-    {"Setup", LV_SYMBOL_SETTINGS},
-    {"Sleep", LV_SYMBOL_POWER},
+    /* {"GAME", LV_SYMBOL_PLAY}, */ /* example: a symbol for the default layer */
+    {"SETTING", LV_SYMBOL_SETTINGS},
+    {"POWER", LV_SYMBOL_POWER},
 };
 #endif
 

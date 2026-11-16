@@ -7,11 +7,11 @@
  *   - LED_LOWBAT (P0.15, lowbat-gpios): battery <= 5 %: blinks 250 ms on / 250 ms off.
  *     Works in every mode. Turned off before deep sleep / soft off.
  *
- *   - Setup mode (keymap layer 1 "Setup", entered by the &sm SM_ENTER hold behavior
+ *   - Setup mode (keymap layer 1 "SETTING", entered by the &sm SM_ENTER hold behavior
  *     on release):
  *       SM_EXIT   (now)        : leave setup mode
  *       SM_CANCEL (on release) : leave setup mode
- *       SM_SLEEP  (on release) : layer 2 "Sleep" for 1 s, then sleep once no key is held
+ *       SM_SLEEP  (on release) : layer 2 "POWER" for 1 s, then sleep once no key is held
  *           CONFIG_SETUP_MODE_SOFT_OFF=n : ZMK deep sleep (needs CONFIG_ZMK_SLEEP=y)
  *           CONFIG_SETUP_MODE_SOFT_OFF=y : soft off (needs CONFIG_ZMK_PM_SOFT_OFF=y);
  *                                          nothing wakes it except the reset button
@@ -77,7 +77,7 @@ extern int zmk_pm_soft_off(void) __attribute__((weak));
 #define LOW_BATT_GRACE_MS 5000    /* ignore the battery value right after boot */
 
 /* Sleep sequence */
-#define SLEEP_SHOW_MS 1000        /* "Sleep" layer shown on the display before power down */
+#define SLEEP_SHOW_MS 1000        /* "POWER" layer shown on the display before power down */
 
 #define LAYER_DEFAULT 0
 #define LAYER_SETUP 1
@@ -195,7 +195,7 @@ static void exit_setup(void) {
 
 #ifdef SLEEP_SUPPORTED
 static void start_sleep(void) {
-    zmk_keymap_layer_to(LAYER_SLEEP); /* keys do nothing, display shows "Sleep" */
+    zmk_keymap_layer_to(LAYER_SLEEP); /* keys do nothing, display shows "POWER" */
     mode = MODE_SLEEP;
     sleep_waiting = false;
     k_work_reschedule(&sleep_work, K_MSEC(SLEEP_SHOW_MS));
