@@ -22,3 +22,11 @@ properties:
     type: int
     default: 2700
     description: Voltage in mV that is shown as 0 %
+
+  offset-mv:
+    type: int
+    default: 0
+    description: |
+      Calibration: this many mV are added to the measured voltage before it is mapped
+      (e.g. to compensate a diode drop or the load sag between the battery and the
+      measuring point). Can be negative.

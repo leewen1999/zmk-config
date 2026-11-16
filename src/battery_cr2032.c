@@ -9,6 +9,7 @@
  * original ZMK battery sensor ("source") and maps it linearly:
  *     full-mv  (default 3200 mV) -> 100 %
  *     empty-mv (default 2700 mV) ->   0 %
+ * offset-mv (default 0) is added to the measured voltage first (calibration).
  * Everything that uses the battery level (display, BLE battery service, low battery
  * LED) gets the new value.
  */
@@ -26,6 +27,7 @@ struct batt_cfg {
     const struct device *source;
     int32_t full_mv;
     int32_t empty_mv;
+    int32_t offset_mv;
 };
 
 struct batt_data {
@@ -65,7 +67,7 @@ static int batt_sample_fetch(const struct device *dev, enum sensor_channel chan)
         return ret;
     }
 
-    data->mv = val.val1 * 1000 + val.val2 / 1000;
+    data->mv = val.val1 * 1000 + val.val2 / 1000 + cfg->offset_mv;
     data->soc = mv_to_pct(data->mv, cfg->full_mv, cfg->empty_mv);
     LOG_DBG("battery %d mV -> %u %%", data->mv, data->soc);
     return 0;
@@ -114,6 +116,7 @@ static const struct sensor_driver_api batt_api = {
         .source = DEVICE_DT_GET(DT_INST_PHANDLE(n, source)),                                       \
         .full_mv = DT_INST_PROP(n, full_mv),                                                       \
         .empty_mv = DT_INST_PROP(n, empty_mv),                                                     \
+        .offset_mv = DT_INST_PROP(n, offset_mv),                                                   \
     };                                                                                             \
     DEVICE_DT_INST_DEFINE(n, batt_init, NULL, &batt_data_##n, &batt_cfg_##n, POST_KERNEL,          \
                           CONFIG_SENSOR_INIT_PRIORITY, &batt_api);

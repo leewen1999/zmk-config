@@ -60,6 +60,9 @@
         source = <&vbatt>;
         full-mv = <3200>;
         empty-mv = <2700>;
+        // Calibration: multimeter 2.86 V while the display showed 18 % (= about 2.79 V
+        // measured by the chip) -> +70 mV. Adjust until the display matches your meter.
+        offset-mv = <70>;
     };
 
     chosen {
