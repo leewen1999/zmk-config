@@ -58,11 +58,14 @@
     vbatt_cr2032: vbatt_cr2032 {
         compatible = "twelvepad,battery-cr2032";
         source = <&vbatt>;
-        full-mv = <3200>;
-        empty-mv = <2700>;
+        // full-mv = <3200>;
+        // empty-mv = <2700>;
         // Calibration: multimeter 2.86 V while the display showed 18 % (= about 2.79 V
         // measured by the chip) -> +70 mV. Adjust until the display matches your meter.
-        offset-mv = <70>;
+        // offset-mv = <70>;
+        full-mv = <4150>;
+        empty-mv = <3550>;
+        offset-mv = <0>;
     };
 
     chosen {
