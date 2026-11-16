@@ -1,0 +1,24 @@
+description: |
+  Battery "wrapper" sensor for a CR2032 coin cell. It reads the battery voltage from
+  another ZMK battery sensor (e.g. the nRF VDDH one) and reports its own state of
+  charge, mapped linearly between empty-mv (0 %) and full-mv (100 %).
+
+compatible: "twelvepad,battery-cr2032"
+
+include: base.yaml
+
+properties:
+  source:
+    type: phandle
+    required: true
+    description: Battery sensor that provides the voltage (SENSOR_CHAN_GAUGE_VOLTAGE)
+
+  full-mv:
+    type: int
+    default: 3200
+    description: Voltage in mV that is shown as 100 %
+
+  empty-mv:
+    type: int
+    default: 2700
+    description: Voltage in mV that is shown as 0 %

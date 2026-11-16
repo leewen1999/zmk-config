@@ -1,4 +1,4 @@
-// twelvepad - 12 keys, direct GPIO (no matrix, no diodes) + nice!view + low battery LED
+// twelvepad (CR2032 version) - 12 keys, direct GPIO + nice!view + low battery LED
 // Each switch connects between its GPIO pin and GND (internal pull-up).
 
 #include <dt-bindings/zmk/matrix_transform.h>
@@ -50,6 +50,20 @@
         compatible = "zmk,behavior-setup-mode";
         #binding-cells = <1>;
         lowbat-gpios = <&gpio0 15 GPIO_ACTIVE_HIGH>;  // LED_LOWBAT P0.15
+    };
+
+    // CR2032: the battery level is computed from the voltage with our own mapping
+    //   full-mv  -> 100 %,   empty-mv -> 0 %   (linear), see src/battery_cr2032.c
+    // &vbatt is the battery sensor of the nice_nano_v2 board (reads the voltage).
+    vbatt_cr2032: vbatt_cr2032 {
+        compatible = "twelvepad,battery-cr2032";
+        source = <&vbatt>;
+        full-mv = <3200>;
+        empty-mv = <2700>;
+    };
+
+    chosen {
+        zmk,battery = &vbatt_cr2032;
     };
 
     // No "zmk,soft-off-wakeup-sources" node on purpose: after a soft off nothing

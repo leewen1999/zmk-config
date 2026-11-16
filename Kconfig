@@ -44,3 +44,8 @@ config TWELVEPAD_DISPLAY_LAYER_SYMBOL
     default n
 
 endif # TWELVEPAD_DISPLAY_TWEAKS
+
+config TWELVEPAD_BATTERY_CR2032
+    bool "CR2032 battery sensor wrapper (own voltage -> % mapping)"
+    depends on SENSOR
+    default n
