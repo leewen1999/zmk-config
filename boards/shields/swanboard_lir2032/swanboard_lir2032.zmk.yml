@@ -1,0 +1,7 @@
+file_format: "1"
+id: swanboard_lir2032
+name: swanboard LIR2032 battery
+type: shield
+url: https://example.com
+requires:
+  - pro_micro

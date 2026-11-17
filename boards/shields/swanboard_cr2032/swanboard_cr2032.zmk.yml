@@ -1,0 +1,7 @@
+file_format: "1"
+id: swanboard_cr2032
+name: swanboard CR2032 battery
+type: shield
+url: https://example.com
+requires:
+  - pro_micro

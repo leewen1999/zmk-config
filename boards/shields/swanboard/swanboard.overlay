@@ -1,10 +1,15 @@
-// twelvepad (CR2032 version) - 12 keys, direct GPIO + nice!view + low battery LED
+// swanboard (base) - 12 keys, direct GPIO (no matrix, no diodes) + low battery LED.
 // Each switch connects between its GPIO pin and GND (internal pull-up).
+//
+// Hardware options are separate shields that are added in build.yaml:
+//   swanboard_led      4 profile LEDs (LED_0..LED_3)
+//   swanboard_nv       nice!view wiring (use together with nice_view)
+//   swanboard_cr2032   CR2032 battery mapping
+// (swanboard_led and swanboard_nv use the same pins: choose one of them.)
 
 #include <dt-bindings/zmk/matrix_transform.h>
-#include <zephyr/dt-bindings/pinctrl/nrf-pinctrl.h>
 
-#include "twelvepad-layouts.dtsi"
+#include "swanboard-layouts.dtsi"
 
 / {
     chosen {
@@ -15,7 +20,7 @@
         compatible = "zmk,kscan-gpio-direct";
         wakeup-source;
 
-        // Key order = SW1 .. SW12 (top to bottom); must match twelvepad.keymap
+        // Key order = SW1 .. SW12 (top to bottom); must match swanboard.keymap
         input-gpios
             = <&gpio1 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW1  P1.13  "1"
             , <&gpio1  0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>  // SW2  P1.00  "2"
@@ -46,66 +51,15 @@
 
     // Setup mode behavior (see src/setup_mode.c, used as &sm in the keymap)
     // + low battery LED (P0.15, the onboard LED, active high).
+    // The swanboard_led shield adds "profile-led-gpios" to this node.
     sm: setup_mode {
         compatible = "zmk,behavior-setup-mode";
         #binding-cells = <1>;
         lowbat-gpios = <&gpio0 15 GPIO_ACTIVE_HIGH>;  // LED_LOWBAT P0.15
     };
 
-    // CR2032: the battery level is computed from the voltage with our own mapping
-    //   full-mv  -> 100 %,   empty-mv -> 0 %   (linear), see src/battery_cr2032.c
-    // &vbatt is the battery sensor of the nice_nano_v2 board (reads the voltage).
-    vbatt_cr2032: vbatt_cr2032 {
-        compatible = "twelvepad,battery-cr2032";
-        source = <&vbatt>;
-        // full-mv = <3200>;
-        // empty-mv = <2700>;
-        // Calibration: multimeter 2.86 V while the display showed 18 % (= about 2.79 V
-        // measured by the chip) -> +70 mV. Adjust until the display matches your meter.
-        // offset-mv = <70>;
-        full-mv = <4150>;
-        empty-mv = <3550>;
-        offset-mv = <0>;
-    };
-
-    chosen {
-        zmk,battery = &vbatt_cr2032;
-    };
-
     // No "zmk,soft-off-wakeup-sources" node on purpose: after a soft off nothing
     // wakes the keyboard except the reset button (lowest power).
     // Deep sleep (CONFIG_ZMK_SLEEP) still wakes on any key through the
     // `wakeup-source` property of the kscan above.
-};
-
-// ---------------------------------------------------------------------------
-// nice!view on its own SPI bus (the ZMK nice_view shield needs "nice_view_spi"):
-//   CS   = P0.11   SCK = P1.11   MOSI = P0.10   (MISO not used)
-//   VCC -> nice!nano VCC pin, GND -> GND
-// P0.10 is an NFC pin: CONFIG_NFCT_PINS_AS_GPIOS=y is required (see .conf).
-// ---------------------------------------------------------------------------
-&pinctrl {
-    spi2_niceview_default: spi2_niceview_default {
-        group1 {
-            psels = <NRF_PSEL(SPIM_SCK, 1, 11)>,
-                    <NRF_PSEL(SPIM_MOSI, 0, 10)>;
-        };
-    };
-
-    spi2_niceview_sleep: spi2_niceview_sleep {
-        group1 {
-            psels = <NRF_PSEL(SPIM_SCK, 1, 11)>,
-                    <NRF_PSEL(SPIM_MOSI, 0, 10)>;
-            low-power-enable;
-        };
-    };
-};
-
-nice_view_spi: &spi2 {
-    compatible = "nordic,nrf-spim";
-    status = "okay";
-    pinctrl-0 = <&spi2_niceview_default>;
-    pinctrl-1 = <&spi2_niceview_sleep>;
-    pinctrl-names = "default", "sleep";
-    cs-gpios = <&gpio0 11 GPIO_ACTIVE_HIGH>;
 };

@@ -1,0 +1,2 @@
+config SHIELD_SWANBOARD_LED
+    def_bool $(shields_list_contains,swanboard_led)

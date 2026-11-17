@@ -1,9 +1,10 @@
 description: |
-  Battery "wrapper" sensor for a CR2032 coin cell. It reads the battery voltage from
-  another ZMK battery sensor (e.g. the nRF VDDH one) and reports its own state of
-  charge, mapped linearly between empty-mv (0 %) and full-mv (100 %).
+  Battery "wrapper" sensor with a linear voltage -> % mapping (CR2032, LIR2032, ...).
+  It reads the battery voltage from another ZMK battery sensor (e.g. the nRF VDDH one)
+  and reports its own state of charge, mapped linearly between empty-mv (0 %) and
+  full-mv (100 %).
 
-compatible: "twelvepad,battery-cr2032"
+compatible: "swanboard,battery-linear"
 
 include: base.yaml
 

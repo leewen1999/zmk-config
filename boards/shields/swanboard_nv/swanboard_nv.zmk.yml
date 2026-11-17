@@ -1,0 +1,7 @@
+file_format: "1"
+id: swanboard_nv
+name: swanboard nice!view wiring
+type: shield
+url: https://example.com
+requires:
+  - pro_micro

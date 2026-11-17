@@ -3,8 +3,8 @@
 # for instructions.
 
 file_format: "1"
-id: twelvepad
-name: twelvepad
+id: swanboard
+name: swanboard
 type: shield
 
 # Set this to a URL that documents the keyboard.

@@ -19,9 +19,37 @@
 #
 ---
 include:
+  # LED + 鋰離子電池
   - board: nice_nano_v2
-    shield: twelvepad nice_view
-    artifact-name: twelvepad_niceview
+    shield: swanboard swanboard_led
+    artifact-name: swanboard_led_liion
+
+  # nice!view + 鋰離子電池
+  - board: nice_nano_v2
+    shield: swanboard swanboard_nv nice_view
+    artifact-name: swanboard_niceview_liion
+
+  # LED + CR2032
+  - board: nice_nano_v2
+    shield: swanboard swanboard_led swanboard_cr2032
+    artifact-name: swanboard_led_cr2032
+
+  # nice!view + CR2032
+  - board: nice_nano_v2
+    shield: swanboard swanboard_nv swanboard_cr2032 nice_view
+    artifact-name: swanboard_niceview_cr2032
+
+  # LED + LIR2032
+  - board: nice_nano_v2
+    shield: swanboard swanboard_led swanboard_lir2032
+    artifact-name: swanboard_led_lir2032
+
+  # nice!view + LIR2032
+  - board: nice_nano_v2
+    shield: swanboard swanboard_nv swanboard_lir2032 nice_view
+    artifact-name: swanboard_niceview_lir2032
+
+  # 清除藍牙配對與儲存的設定
   - board: nice_nano_v2
     shield: settings_reset
     artifact-name: settings_reset

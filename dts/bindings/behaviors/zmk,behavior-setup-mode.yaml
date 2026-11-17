@@ -1,4 +1,4 @@
-description: Setup mode behavior (setup layer, sleep sequence) + low battery LED
+description: Setup mode behavior (setup layer, sleep sequence) + low battery LED + optional profile LEDs
 
 compatible: "zmk,behavior-setup-mode"
 
@@ -8,3 +8,9 @@ properties:
   lowbat-gpios:
     type: phandle-array
     required: true
+    description: Low battery LED (1 entry)
+
+  profile-led-gpios:
+    type: phandle-array
+    required: false
+    description: Profile LEDs LED_0..LED_3 (4 entries), added by the swanboard_led shield

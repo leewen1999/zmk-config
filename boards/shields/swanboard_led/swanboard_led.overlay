@@ -1,0 +1,13 @@
+// swanboard_led - 4 profile LEDs (active high), added to the &sm node of the base shield.
+// The ORDER matters: index 0..3 = LED_0..LED_3 (one per BT profile).
+// P0.09 / P0.10 are NFC pins: CONFIG_NFCT_PINS_AS_GPIOS=y (set in swanboard.conf).
+// These pins are also used by the nice!view wiring (swanboard_nv): do not use both.
+
+&sm {
+    profile-led-gpios
+        = <&gpio0 11 GPIO_ACTIVE_HIGH>  // LED_0 P0.11
+        , <&gpio1 11 GPIO_ACTIVE_HIGH>  // LED_1 P1.11
+        , <&gpio0 10 GPIO_ACTIVE_HIGH>  // LED_2 P0.10 (NFC pin)
+        , <&gpio0  9 GPIO_ACTIVE_HIGH>  // LED_3 P0.09 (NFC pin)
+        ;
+};

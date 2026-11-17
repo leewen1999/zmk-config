@@ -1,27 +1,27 @@
 /*
- * CR2032 battery sensor wrapper.
+ * Linear battery sensor wrapper (CR2032, LIR2032, ...).
  *
  * ZMK reads the battery through the sensor named by /chosen/zmk,battery and asks it for
  * SENSOR_CHAN_GAUGE_STATE_OF_CHARGE. The stock drivers convert the voltage with a
- * Li-ion formula (3.45 V = 0 %, 4.2 V = 100 %), which is useless for a CR2032.
+ * Li-ion formula (3.45 V = 0 %, 4.2 V = 100 %), which does not fit every cell.
  *
- * This wrapper is chosen instead (see twelvepad.overlay): it takes the voltage from the
- * original ZMK battery sensor ("source") and maps it linearly:
- *     full-mv  (default 3200 mV) -> 100 %
- *     empty-mv (default 2700 mV) ->   0 %
+ * This wrapper is chosen instead (see the swanboard_cr2032 / swanboard_lir2032 shields):
+ * it takes the voltage from the original ZMK battery sensor ("source") and maps it linearly:
+ *     full-mv  -> 100 %
+ *     empty-mv ->   0 %
  * offset-mv (default 0) is added to the measured voltage first (calibration).
  * Everything that uses the battery level (display, BLE battery service, low battery
  * LED) gets the new value.
  */
 
-#define DT_DRV_COMPAT twelvepad_battery_cr2032
+#define DT_DRV_COMPAT swanboard_battery_linear
 
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(battery_cr2032, CONFIG_SENSOR_LOG_LEVEL);
+LOG_MODULE_REGISTER(battery_linear, CONFIG_SENSOR_LOG_LEVEL);
 
 struct batt_cfg {
     const struct device *source;

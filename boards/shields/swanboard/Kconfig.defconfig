@@ -1,0 +1,6 @@
+if SHIELD_SWANBOARD
+
+config ZMK_KEYBOARD_NAME
+    default "swanboard"
+
+endif # SHIELD_SWANBOARD

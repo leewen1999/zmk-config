@@ -1,0 +1,7 @@
+file_format: "1"
+id: swanboard_led
+name: swanboard LEDs
+type: shield
+url: https://example.com
+requires:
+  - pro_micro

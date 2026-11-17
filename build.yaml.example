@@ -1,0 +1,45 @@
+# Example build.yaml for the swanboard shields.
+# Pick the combinations you want. Shield names are separated by spaces.
+#
+#   swanboard          base (keys, setup mode, low battery LED) - always needed
+#   swanboard_led      4 profile LEDs                           \ choose ONE of these two:
+#   swanboard_nv       nice!view wiring (+ nice_view)           / (they use the same pins)
+#   swanboard_cr2032   CR2032 mapping (3.2 V = 100 %, 2.7 V = 0 %)   \ choose ONE battery
+#   swanboard_lir2032  LIR2032 mapping (4.15 V = 100 %, 3.55 V = 0 %) / shield, or none
+#                      (none = ZMK's stock Li-ion mapping, 4.2 V = 100 %, 3.45 V = 0 %)
+---
+include:
+  # LEDs + Li-ion battery
+  - board: nice_nano_v2
+    shield: swanboard swanboard_led
+    artifact-name: swanboard_led_liion
+
+  # nice!view + Li-ion battery
+  - board: nice_nano_v2
+    shield: swanboard swanboard_nv nice_view
+    artifact-name: swanboard_niceview_liion
+
+  # LEDs + CR2032
+  - board: nice_nano_v2
+    shield: swanboard swanboard_led swanboard_cr2032
+    artifact-name: swanboard_led_cr2032
+
+  # nice!view + CR2032
+  - board: nice_nano_v2
+    shield: swanboard swanboard_nv swanboard_cr2032 nice_view
+    artifact-name: swanboard_niceview_cr2032
+
+  # LEDs + LIR2032
+  - board: nice_nano_v2
+    shield: swanboard swanboard_led swanboard_lir2032
+    artifact-name: swanboard_led_lir2032
+
+  # nice!view + LIR2032
+  - board: nice_nano_v2
+    shield: swanboard swanboard_nv swanboard_lir2032 nice_view
+    artifact-name: swanboard_niceview_lir2032
+
+  # Clears the stored Bluetooth bonds / settings
+  - board: nice_nano_v2
+    shield: settings_reset
+    artifact-name: settings_reset

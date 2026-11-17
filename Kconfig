@@ -5,6 +5,13 @@ config SETUP_MODE
 
 if SETUP_MODE
 
+config SETUP_MODE_PROFILE_LEDS
+    bool "Profile LEDs LED_0..LED_3 (needs the swanboard_led shield)"
+    default n
+    help
+      On: boot / profile / battery / setup / sleep animations on 4 LEDs.
+      Off: those are left to the display (nice!view).
+
 config SETUP_MODE_SOFT_OFF
     bool "Use soft off instead of deep sleep (setup-mode sleep key and idle timeout)"
     default n
@@ -24,28 +31,28 @@ config SETUP_MODE_SOFT_OFF_TIMEOUT_MS
 
 endif # SETUP_MODE
 
-config TWELVEPAD_DISPLAY_TWEAKS
+config SWANBOARD_DISPLAY_TWEAKS
     bool "nice!view tweaks on top of the built-in status screen (rotation, BLE symbol)"
     depends on ZMK_DISPLAY
     default n
 
-if TWELVEPAD_DISPLAY_TWEAKS
+if SWANBOARD_DISPLAY_TWEAKS
 
-config TWELVEPAD_DISPLAY_ROTATE_180
+config SWANBOARD_DISPLAY_ROTATE_180
     bool "Rotate the display picture by 180 degrees (LVGL software rotation)"
     default n
 
-config TWELVEPAD_DISPLAY_BLE_SYMBOL
+config SWANBOARD_DISPLAY_BLE_SYMBOL
     bool "Show the Bluetooth symbol instead of the Wi-Fi symbol for BLE"
     default n
 
-config TWELVEPAD_DISPLAY_LAYER_SYMBOL
+config SWANBOARD_DISPLAY_LAYER_SYMBOL
     bool "Show other symbols in front of some layer names (settings / power)"
     default n
 
-endif # TWELVEPAD_DISPLAY_TWEAKS
+endif # SWANBOARD_DISPLAY_TWEAKS
 
-config TWELVEPAD_BATTERY_CR2032
-    bool "CR2032 battery sensor wrapper (own voltage -> % mapping)"
+config SWANBOARD_BATTERY_LINEAR
+    bool "Battery sensor wrapper with a linear voltage -> % mapping (CR2032, LIR2032)"
     depends on SENSOR
     default n

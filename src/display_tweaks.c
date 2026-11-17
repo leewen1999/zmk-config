@@ -1,7 +1,7 @@
 /*
  * nice!view tweaks applied on top of ZMK's built-in status screen.
  *
- *  - CONFIG_TWELVEPAD_DISPLAY_BLE_SYMBOL: ZMK's built-in output widget draws the
+ *  - CONFIG_SWANBOARD_DISPLAY_BLE_SYMBOL: ZMK's built-in output widget draws the
  *    LVGL "Wi-Fi" glyph for Bluetooth. A render-start hook of the LVGL display driver
  *    replaces it with the LVGL Bluetooth glyph right BEFORE every redraw, so there is
  *    no timer and no frame with the Wi-Fi glyph (boot, profile switch, connect ...).
@@ -9,12 +9,12 @@
  *    The edit is done in place (both glyphs are 3 bytes in UTF-8), because
  *    lv_label_set_text() must not be called while rendering.
  *
- *  - CONFIG_TWELVEPAD_DISPLAY_LAYER_SYMBOL: the layer widget draws the LVGL keyboard glyph
+ *  - CONFIG_SWANBOARD_DISPLAY_LAYER_SYMBOL: the layer widget draws the LVGL keyboard glyph
  *    in front of the layer name. For the layers listed in layer_symbols[] below, the
  *    glyph is replaced (e.g. "SETTING" -> settings glyph, "POWER" -> power glyph). Same
  *    render-start hook, same in-place edit (all glyphs are 3 bytes in UTF-8).
  *
- *  - CONFIG_TWELVEPAD_DISPLAY_ROTATE_180 (experimental): turn the picture by 180
+ *  - CONFIG_SWANBOARD_DISPLAY_ROTATE_180 (experimental): turn the picture by 180
  *    degrees (LVGL software rotation), applied once from a one-shot LVGL timer.
  */
 
@@ -31,15 +31,15 @@ LOG_MODULE_REGISTER(display_tweaks, CONFIG_ZMK_LOG_LEVEL);
 #define HOOK_RETRY_MS 100
 #define HOOK_RETRY_MAX 100 /* 10 s */
 
-#if defined(CONFIG_TWELVEPAD_DISPLAY_BLE_SYMBOL) || defined(CONFIG_TWELVEPAD_DISPLAY_LAYER_SYMBOL)
+#if defined(CONFIG_SWANBOARD_DISPLAY_BLE_SYMBOL) || defined(CONFIG_SWANBOARD_DISPLAY_LAYER_SYMBOL)
 
 static struct k_work_delayable hook_work;
 static int hook_tries;
 
-#ifdef CONFIG_TWELVEPAD_DISPLAY_LAYER_SYMBOL
+#ifdef CONFIG_SWANBOARD_DISPLAY_LAYER_SYMBOL
 /* Layer name (the keymap "display-name") -> glyph shown in front of it.
  * Layers that are not listed keep the keyboard glyph. Keep the names in sync with
- * the display-name properties in twelvepad.keymap. */
+ * the display-name properties in swanboard.keymap. */
 static const struct {
     const char *name;
     const char *symbol;
@@ -56,7 +56,7 @@ static void patch_labels(lv_obj_t *obj) {
         char *text = lv_label_get_text(obj);
 
         if (text != NULL) {
-#ifdef CONFIG_TWELVEPAD_DISPLAY_BLE_SYMBOL
+#ifdef CONFIG_SWANBOARD_DISPLAY_BLE_SYMBOL
             /* Wi-Fi glyph -> Bluetooth glyph */
             char *pos = strstr(text, LV_SYMBOL_WIFI);
 
@@ -64,7 +64,7 @@ static void patch_labels(lv_obj_t *obj) {
                 memcpy(pos, LV_SYMBOL_BLUETOOTH, strlen(LV_SYMBOL_BLUETOOTH));
             }
 #endif
-#ifdef CONFIG_TWELVEPAD_DISPLAY_LAYER_SYMBOL
+#ifdef CONFIG_SWANBOARD_DISPLAY_LAYER_SYMBOL
             /* "<keyboard glyph>[ ]<layer name>" -> "<other glyph>[ ]<layer name>" */
             size_t glyph_len = strlen(LV_SYMBOL_KEYBOARD);
 
@@ -124,7 +124,7 @@ static void hook_handler(struct k_work *work) {
 
 #endif /* BLE_SYMBOL || LAYER_SYMBOL */
 
-#ifdef CONFIG_TWELVEPAD_DISPLAY_ROTATE_180
+#ifdef CONFIG_SWANBOARD_DISPLAY_ROTATE_180
 static struct k_work_delayable rotate_work;
 
 static void rotate_cb(lv_timer_t *timer) {
@@ -140,16 +140,16 @@ static void rotate_cb(lv_timer_t *timer) {
 static void rotate_handler(struct k_work *work) {
     lv_timer_create(rotate_cb, 250, NULL);
 }
-#endif /* CONFIG_TWELVEPAD_DISPLAY_ROTATE_180 */
+#endif /* CONFIG_SWANBOARD_DISPLAY_ROTATE_180 */
 
 static int display_tweaks_init(void) {
-#if defined(CONFIG_TWELVEPAD_DISPLAY_BLE_SYMBOL) || defined(CONFIG_TWELVEPAD_DISPLAY_LAYER_SYMBOL)
+#if defined(CONFIG_SWANBOARD_DISPLAY_BLE_SYMBOL) || defined(CONFIG_SWANBOARD_DISPLAY_LAYER_SYMBOL)
     k_work_init_delayable(&hook_work, hook_handler);
     if (!install_hook()) {
         k_work_schedule(&hook_work, K_MSEC(HOOK_RETRY_MS));
     }
 #endif
-#ifdef CONFIG_TWELVEPAD_DISPLAY_ROTATE_180
+#ifdef CONFIG_SWANBOARD_DISPLAY_ROTATE_180
     k_work_init_delayable(&rotate_work, rotate_handler);
     k_work_schedule(&rotate_work, K_MSEC(1000));
 #endif

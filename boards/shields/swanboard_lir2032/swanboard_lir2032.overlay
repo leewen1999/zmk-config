@@ -1,0 +1,18 @@
+// swanboard_lir2032 - the battery level is computed from the voltage with our own mapping
+//   4.15 V -> 100 %,   3.55 V -> 0 %   (linear), see src/battery_linear.c
+// &vbatt is the battery sensor of the nice_nano_v2 board (reads the voltage).
+// Use only ONE battery shield (swanboard_cr2032 or swanboard_lir2032): both set /chosen/zmk,battery.
+
+/ {
+    vbatt_lir2032: vbatt_lir2032 {
+        compatible = "swanboard,battery-linear";
+        source = <&vbatt>;
+        full-mv = <4150>;
+        empty-mv = <3550>;
+        offset-mv = <0>;
+    };
+
+    chosen {
+        zmk,battery = &vbatt_lir2032;
+    };
+};

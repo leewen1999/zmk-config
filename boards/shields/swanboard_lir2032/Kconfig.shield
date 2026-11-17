@@ -1,0 +1,2 @@
+config SHIELD_SWANBOARD_LIR2032
+    def_bool $(shields_list_contains,swanboard_lir2032)
