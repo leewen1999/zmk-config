@@ -4,8 +4,10 @@
  * Always:
  *   - LED_LOWBAT (lowbat-gpios, P0.15): battery <= 5 %: blinks 250 ms on / 250 ms off.
  *     Works in every mode. Turned off before deep sleep / soft off.
- *   - Setup mode (keymap layer 1 "SETTING", entered by the &sm SM_ENTER hold behavior
- *     on release): SM_EXIT (now) / SM_CANCEL (on release) leave it.
+ *   - Setup mode (keymap layer 1 "SETTING"): entered when SW9 (ENTER) is released after
+ *     more than ENTER_LONG_PRESS_MS (SM_ENTER_DOWN remembers the press time, SM_ENTER_UP
+ *     checks it; ENTER itself is sent like a normal key). SM_EXIT (now) / SM_CANCEL (on
+ *     release) leave it.
  *   - SM_SLEEP (on release): layer 2 "POWER", then sleep once no key is held
  *       CONFIG_SETUP_MODE_SOFT_OFF=n : ZMK deep sleep (needs CONFIG_ZMK_SLEEP=y)
  *       CONFIG_SETUP_MODE_SOFT_OFF=y : soft off (needs CONFIG_ZMK_PM_SOFT_OFF=y);
@@ -83,6 +85,8 @@ extern int zmk_pm_soft_off(void) __attribute__((weak));
 #define LOWBAT_CHECK_MS 5000   /* how often to look at the battery otherwise */
 #define LOW_BATT_GRACE_MS 5000 /* ignore the battery value right after boot */
 
+#define ENTER_LONG_PRESS_MS 500 /* SW9 held longer than this: enter setup mode */
+
 #define TICK_MS 250
 #define SETUP_TICK_MS 250
 
@@ -92,12 +96,13 @@ extern int zmk_pm_soft_off(void) __attribute__((weak));
 
 /* &sm parameters (keep in sync with swanboard.keymap) */
 enum {
-    SM_ENTER = 1,
     SM_EXIT = 2,
     SM_CANCEL = 3,
     SM_BATTERY = 4,
     SM_PROFILE = 5,
     SM_SLEEP = 6,
+    SM_ENTER_DOWN = 7,
+    SM_ENTER_UP = 8,
     SM_SELECTED_0 = 10, /* SM_SELECTED_0 .. SM_SELECTED_0 + 3 */
 };
 
@@ -158,7 +163,7 @@ static struct k_work_delayable tick_work;
 static struct k_work_delayable lowbat_work;
 static enum mode mode = MODE_BOOT;
 static bool lowbat_on;
-static bool enter_armed;
+static int64_t enter_down_at = -1; /* uptime of the SW9 press, -1 = not armed */
 #ifdef SLEEP_SUPPORTED
 static size_t sleep_pos;
 static bool sleep_waiting;
@@ -454,9 +459,9 @@ static void idle_handler(struct k_work *work) {
 static int on_pressed(struct zmk_behavior_binding *binding,
                       struct zmk_behavior_binding_event event) {
     switch (binding->param1) {
-    case SM_ENTER:
-        /* Hold-tap fired its hold action (> 500 ms). Enter on release. */
-        enter_armed = (mode == MODE_NORMAL);
+    case SM_ENTER_DOWN:
+        /* SW9 pressed (ENTER goes out like a normal key): remember when. */
+        enter_down_at = (mode == MODE_NORMAL) ? k_uptime_get() : -1;
         break;
     case SM_EXIT:
         if (mode == MODE_SETUP) {
@@ -495,11 +500,13 @@ static int on_pressed(struct zmk_behavior_binding *binding,
 static int on_released(struct zmk_behavior_binding *binding,
                        struct zmk_behavior_binding_event event) {
     switch (binding->param1) {
-    case SM_ENTER:
-        if (enter_armed && mode == MODE_NORMAL) {
+    case SM_ENTER_UP:
+        /* SW9 released: held long enough -> setup mode */
+        if (enter_down_at >= 0 && mode == MODE_NORMAL &&
+            (k_uptime_get() - enter_down_at) >= ENTER_LONG_PRESS_MS) {
             enter_setup();
         }
-        enter_armed = false;
+        enter_down_at = -1;
         break;
     case SM_CANCEL:
         if (mode == MODE_SETUP) {
