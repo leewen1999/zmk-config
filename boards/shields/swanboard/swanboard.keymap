@@ -6,7 +6,8 @@
 //
 // Normal layer (0, "GAME"):
 //   SW1..SW4 = 1 2 3 4, SW5..SW8 = UP RIGHT DOWN LEFT,
-//   SW9 = ENTER (tap) / hold > 500 ms then release = enter setup mode,
+//   SW9 = ENTER (tap: sent when the key is released, down for 50 ms) /
+//         hold > 500 ms then release = enter setup mode,
 //   SW10 = SPACE,
 //   SW11 = Z, SW12 = X
 //
@@ -41,17 +42,28 @@
 
 / {
     behaviors {
-        // SW9: tap = ENTER, hold > 500 ms = setup mode (entered on release)
+        // SW9: tap = ENTER (held for 50 ms, see enter_tap), hold > 500 ms = setup mode
+        // (entered on release). The tap needs no parameter, so use "&setup_ht SM_ENTER 0".
         setup_ht: setup_ht {
             compatible = "zmk,behavior-hold-tap";
             #binding-cells = <2>;
             flavor = "tap-preferred";
             tapping-term-ms = <500>;
-            bindings = <&sm>, <&kp>;
+            bindings = <&sm>, <&enter_tap>;
         };
     };
 
     macros {
+        // ENTER with a real key-down time. A plain hold-tap tap presses and releases the key
+        // in the same instant (0 ms), which games that poll the keyboard once per frame miss.
+        enter_tap: enter_tap {
+            compatible = "zmk,behavior-macro";
+            #binding-cells = <0>;
+            wait-ms = <0>;
+            tap-ms = <50>;
+            bindings = <&macro_tap>, <&kp ENTER>;
+        };
+
         sm_sel0: sm_sel0 {
             compatible = "zmk,behavior-macro";
             #binding-cells = <0>;
@@ -126,7 +138,7 @@
                 &kp RIGHT
                 &kp DOWN
                 &kp LEFT
-                &setup_ht SM_ENTER ENTER
+                &setup_ht SM_ENTER 0
                 &kp SPACE
                 &kp Z
                 &kp X
