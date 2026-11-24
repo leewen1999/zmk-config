@@ -1,0 +1,10 @@
+// swanboard_buzzer - piezo buzzer on P1.04 (plays a melody at boot / wake).
+// Connect the piezo disc between P1.04 and GND. P1.04 is not used by any other swanboard
+// shield, so this shield can be combined with all of them.
+
+/ {
+    beep: startup_beep {
+        compatible = "swanboard,startup-beep";
+        buzzer-gpios = <&gpio1 4 GPIO_ACTIVE_HIGH>;  // P1.04
+    };
+};

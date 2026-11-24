@@ -56,3 +56,7 @@ config SWANBOARD_BATTERY_LINEAR
     bool "Battery sensor wrapper with a linear voltage -> % mapping (CR2032, LIR2032)"
     depends on SENSOR
     default n
+
+config SWANBOARD_STARTUP_BEEP
+    bool "Play a short melody on a piezo buzzer at boot / wake (needs the swanboard_buzzer shield)"
+    default n

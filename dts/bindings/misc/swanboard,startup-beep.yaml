@@ -1,0 +1,11 @@
+description: Piezo buzzer that plays a short melody at boot / wake (see src/startup_beep.c)
+
+compatible: "swanboard,startup-beep"
+
+include: base.yaml
+
+properties:
+  buzzer-gpios:
+    type: phandle-array
+    required: true
+    description: GPIO that drives the buzzer (square wave, one entry)
