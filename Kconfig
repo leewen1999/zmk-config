@@ -60,3 +60,13 @@ config SWANBOARD_BATTERY_LINEAR
 config SWANBOARD_STARTUP_BEEP
     bool "Play a short melody on a piezo buzzer at boot / wake (needs the swanboard_buzzer shield)"
     default n
+
+config SWANBOARD_DISPLAY_BOOT_IMAGE
+    bool "Show a 160 x 68 picture on the display at boot / wake-up (src/boot_image_data.c)"
+    depends on ZMK_DISPLAY
+    default n
+
+config SWANBOARD_DISPLAY_BOOT_IMAGE_MS
+    int "How long the boot picture is shown (ms)"
+    depends on SWANBOARD_DISPLAY_BOOT_IMAGE
+    default 2000
