@@ -9,6 +9,11 @@
  * scheduled on zmk_display_work_q(). The picture is put on LVGL's "top layer", above
  * the status screen, and deleted again afterwards.
  *
+ * The first step is started from the SYSTEM work queue and retried until the display work
+ * queue accepts work: that queue is only started by zmk_display_init(), which runs after
+ * this file's SYS_INIT, and k_work_schedule_for_queue() refuses work (-ENODEV) for a queue
+ * that is not started yet.
+ *
  * The countdown starts when the picture has really been DRAWN (LV_EVENT_DRAW_MAIN_END),
  * not when the object is created: the display needs some time after boot, and a fixed
  * time from creation could run out before anything is visible. If the picture is never
@@ -29,11 +34,15 @@ extern const lv_img_dsc_t swanboard_boot_image;
 #define SHOW_RETRY_MS 100
 #define SHOW_RETRY_MAX 100 /* 10 s */
 #define FALLBACK_MS 10000
+#define KICK_RETRY_MS 100
+#define KICK_RETRY_MAX 100 /* 10 s */
 
-static struct k_work_delayable show_work;
-static struct k_work_delayable hide_work;
+static struct k_work_delayable kick_work; /* runs on the system work queue */
+static struct k_work_delayable show_work; /* runs on the display work queue */
+static struct k_work_delayable hide_work; /* runs on the display work queue */
 static lv_obj_t *boot_img;
 static int show_tries;
+static int kick_tries;
 static bool hide_started;
 
 static void hide_handler(struct k_work *work) {
@@ -82,10 +91,27 @@ static void show_handler(struct k_work *work) {
     k_work_schedule_for_queue(zmk_display_work_q(), &hide_work, K_MSEC(FALLBACK_MS));
 }
 
+/* System work queue: hand the first step over to the display work queue as soon as that
+ * queue has been started (k_work_schedule_for_queue() returns a negative errno before). */
+static void kick_handler(struct k_work *work) {
+    int ret = k_work_schedule_for_queue(zmk_display_work_q(), &show_work, K_NO_WAIT);
+
+    if (ret < 0) {
+        if (++kick_tries < KICK_RETRY_MAX) {
+            k_work_schedule(&kick_work, K_MSEC(KICK_RETRY_MS));
+        } else {
+            LOG_ERR("display work queue never accepted work: %d", ret);
+        }
+        return;
+    }
+    LOG_INF("boot picture step scheduled on the display queue (after %d retries)", kick_tries);
+}
+
 static int boot_image_init(void) {
+    k_work_init_delayable(&kick_work, kick_handler);
     k_work_init_delayable(&show_work, show_handler);
     k_work_init_delayable(&hide_work, hide_handler);
-    k_work_schedule_for_queue(zmk_display_work_q(), &show_work, K_NO_WAIT);
+    k_work_schedule(&kick_work, K_MSEC(KICK_RETRY_MS));
     return 0;
 }
 
