@@ -21,7 +21,7 @@
 include:
   # LED + 鋰離子電池
   # - board: nice_nano_v2
-    # shield: swanboard swanboard_led
+    # shield: swanboard swanboard_led swanboard_buzzer
     # snippet: studio-rpc-usb-uart
     # cmake-args: -DCONFIG_ZMK_STUDIO=y -DCONFIG_ZMK_STUDIO_LOCKING=n
     # artifact-name: swanboard_led_liion
@@ -48,22 +48,22 @@ include:
     # artifact-name: swanboard_niceview_cr2032
 
   # LED + LIR2032
-  # - board: nice_nano_v2
-    # shield: swanboard swanboard_led swanboard_lir2032 swanboard_buzzer
-    # snippet: studio-rpc-usb-uart
-    # cmake-args: -DCONFIG_ZMK_STUDIO=y -DCONFIG_ZMK_STUDIO_LOCKING=n
-    # artifact-name: swanboard_led_lir2032
+  - board: nice_nano_v2
+    shield: swanboard swanboard_led swanboard_lir2032
+    snippet: studio-rpc-usb-uart
+    cmake-args: -DCONFIG_ZMK_STUDIO=y -DCONFIG_ZMK_STUDIO_LOCKING=n -DCONFIG_ZMK_KEYBOARD_NAME=\"SwanBoard-LED\"
+    artifact-name: swanboard_led_lir2032
 
   # nice!view + LIR2032
   - board: nice_nano_v2
     shield: swanboard swanboard_nv swanboard_lir2032 nice_view
     snippet: studio-rpc-usb-uart
-    cmake-args: -DCONFIG_ZMK_STUDIO=y -DCONFIG_ZMK_STUDIO_LOCKING=n
-    # snippet: zmk-usb-logging
-    # cmake-args: -DCONFIG_ZMK_LOG_LEVEL_DBG=y -DCONFIG_LOG_PROCESS_THREAD_STARTUP_DELAY_MS=8000
+    cmake-args: -DCONFIG_ZMK_STUDIO=y -DCONFIG_ZMK_STUDIO_LOCKING=n -DCONFIG_ZMK_KEYBOARD_NAME=\"SwanBoard-LCD\"
     artifact-name: swanboard_niceview_lir2032
 
   # 清除藍牙配對與儲存的設定
   - board: nice_nano_v2
     shield: settings_reset
     artifact-name: settings_reset
+    # snippet: zmk-usb-logging
+    # cmake-args: -DCONFIG_ZMK_LOG_LEVEL_DBG=y -DCONFIG_LOG_PROCESS_THREAD_STARTUP_DELAY_MS=8000
