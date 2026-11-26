@@ -85,7 +85,7 @@ extern int zmk_pm_soft_off(void) __attribute__((weak));
 #define LOWBAT_CHECK_MS 5000   /* how often to look at the battery otherwise */
 #define LOW_BATT_GRACE_MS 5000 /* ignore the battery value right after boot */
 
-#define ENTER_LONG_PRESS_MS 500 /* SW9 held longer than this: enter setup mode */
+#define ENTER_LONG_PRESS_MS 1000 /* SW9 held longer than this: enter setup mode */
 
 #define TICK_MS 250
 #define SETUP_TICK_MS 250

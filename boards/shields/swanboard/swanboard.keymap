@@ -7,7 +7,7 @@
 // Normal layer (0, "GAME"):
 //   SW1..SW4 = 1 2 3 4, SW5..SW8 = UP RIGHT DOWN LEFT,
 //   SW9 = ENTER (down on press, up on release, like any key); released after
-//         more than 500 ms = also enter setup mode,
+//         more than 1000 ms = also enter setup mode,
 //   SW10 = SPACE,
 //   SW11 = Z, SW12 = X
 //
@@ -30,7 +30,7 @@
 
 // &sm parameters (keep in sync with src/setup_mode.c)
 #define SM_ENTER_DOWN 7   // SW9 pressed: remember the time
-#define SM_ENTER_UP   8   // SW9 released: held > 500 ms -> enter setup mode
+#define SM_ENTER_UP   8   // SW9 released: held > 1000 ms -> enter setup mode
 #define SM_EXIT       2   // leave setup mode now
 #define SM_CANCEL     3   // leave setup mode on release
 #define SM_BATTERY    4   // LEDs: hold = battery level; otherwise: leave setup mode on release
@@ -45,7 +45,7 @@
     macros {
         // SW9 = ENTER that behaves like a normal key: key down when the switch is pressed,
         // key up when it is released. In addition &sm remembers the press time; when the
-        // switch is released after more than 500 ms, setup mode is entered (src/setup_mode.c).
+        // switch is released after more than 1000 ms, setup mode is entered (src/setup_mode.c).
         // (&macro_pause_for_release keeps the macro waiting for the physical release.)
         enter_key: enter_key {
             compatible = "zmk,behavior-macro";
